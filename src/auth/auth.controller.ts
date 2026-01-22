@@ -36,13 +36,13 @@ import { UpdateProfileWithFileDto } from './dto/update-profile-with-file.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Public()
-  @AuthRateLimit()
-  @Post('register')
-  @ApiOperation({ summary: 'Register new admin user' })
-  register(@Body() registerDto: RegisterDto, @Res() res: Response, @Request() req) {
-    return this.authService.register(registerDto, res, req);
-  }
+  // @Public()
+  // @AuthRateLimit()
+  // @Post('register')
+  // @ApiOperation({ summary: 'Register new admin user' })
+  // register(@Body() registerDto: RegisterDto, @Res() res: Response, @Request() req) {
+  //   return this.authService.register(registerDto, res, req);
+  // }
 
   @Public()
   @AuthRateLimit()

@@ -1,0 +1,215 @@
+module.exports = (
+  name = "User",
+  userId = "N/A",
+  timestamp = "Unknown time"
+) => {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Password Update Confirmation</title>
+  <style>
+    body {
+      font-family: 'Roboto', 'Helvetica Neue', sans-serif;
+      line-height: 1.7;
+      color: #2d3748;
+      margin: 0;
+      padding: 0;
+      background: #edf2f7;
+    }
+    .wrapper {
+      max-width: 650px;
+      margin: 40px auto;
+      background: linear-gradient(145deg, #ffffff, #f9fafc);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    .header-band {
+      height: 8px;
+      background: linear-gradient(90deg, #3b82f6, #6366f1);
+    }
+    .header {
+      padding: 30px 25px 20px;
+      text-align: center;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .logo {
+      max-height: 70px;
+      margin-bottom: 5px;
+    }
+    .main-content {
+      padding: 35px 40px;
+    }
+    .title {
+      color: #1e40af;
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 25px;
+    }
+    .detail-box {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+      border-left: 4px solid #3b82f6;
+    }
+    .user-details {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-gap: 10px 15px;
+      margin-bottom: 15px;
+    }
+    .label {
+      font-weight: 600;
+      color: #4b5563;
+    }
+    .value {
+      color: #1f2937;
+    }
+    .alert-box {
+      background: #fee2e2;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 30px 0;
+      position: relative;
+    }
+    .alert-icon {
+      font-size: 24px;
+      color: #dc2626;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    .action-button {
+      display: inline-block;
+      background: #3b82f6;
+      color: white;
+      text-decoration: none;
+      padding: 12px 28px;
+      border-radius: 6px;
+      font-weight: 500;
+      margin-top: 10px;
+      transition: background 0.2s;
+    }
+    .action-button:hover {
+      background: #2563eb;
+    }
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 30px 0;
+    }
+    .help-text {
+      font-size: 14px;
+      color: #64748b;
+    }
+    .footer {
+      background: #f1f5f9;
+      padding: 25px 40px;
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .social-links {
+      margin: 20px 0;
+    }
+    .social-button {
+      display: inline-block;
+      width: 36px;
+      height: 36px;
+      line-height: 36px;
+      text-align: center;
+      background: white;
+      border-radius: 50%;
+      margin: 0 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      color: #4b5563;
+      text-decoration: none;
+      font-size: 18px;
+    }
+    .address {
+      margin-top: 15px;
+      font-size: 13px;
+    }
+    @media only screen and (max-width: 600px) {
+      .wrapper {
+        margin: 0;
+        border-radius: 0;
+      }
+      .main-content {
+        padding: 25px 20px;
+      }
+      .footer {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header-band"></div>
+    <div class="header">
+      <img src="https://res.cloudinary.com/drgt9tavz/image/upload/v1747676665/ymm54sozbitqoqgf4djv.png" alt="Agukanet logo" class="logo"/>
+    </div>
+    <div class="main-content">
+      <h1 class="title">Password Successfully Updated</h1>
+      
+      <p>Hello ${name},</p>
+      
+      <p>We're confirming that your Wholesome Uganda Admin account password has been changed successfully. Your account security is important to us.</p>
+
+      <div class="detail-box">
+        <div class="user-details">
+          <span class="label">Account:</span>
+          <span class="value">Wholesome Uganda Admin Portal</span>
+          
+          <span class="label">User ID:</span>
+          <span class="value">${userId}</span>
+          
+          <span class="label">Date & Time:</span>
+          <span class="value">${timestamp}</span>
+          
+          <span class="label">Action:</span>
+          <span class="value">Password Change</span>
+        </div>
+      </div>
+      
+      <div class="alert-box">
+        <span class="alert-icon">⚠️</span>
+        <strong>Didn't request this change?</strong>
+        <p>If you did not initiate this password update, your account may be compromised. Please take immediate action to secure your account.</p>
+        <a href="mailto:support@agukanet.com" class="action-button">Email Support</a>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <p>For your protection, we recommend:</p>
+      <ul>
+        <li>Using strong, unique passwords for all your accounts</li>
+        <li>Enabling two-factor authentication where available</li>
+        <li>Checking for any unusual account activity</li>
+      </ul>
+      
+      <p class="help-text">If you need assistance, our support team is available 24/7 at <a href="mailto:support@agukanet.com">support@agukanet.com</a> or call (+250)784811494</p>
+    </div>
+    
+    <div class="footer">
+      <div class="social-links">
+        <a href="https://facebook.com/comagency" class="social-button">f</a>
+        <a href="https://twitter.com/comagency" class="social-button">t</a>
+        <a href="https://linkedin.com/company/comagency" class="social-button">in</a>
+        <a href="https://instagram.com/comagency" class="social-button">ig</a>
+      </div>
+      
+      <p>© 2025 COM ONLINE. All rights reserved.</p>
+      <p>This is an automated message, please do not reply.</p>
+      
+      <div class="address">
+        COM ONLINE ,Office Gikondo/73/kk/569/street, Kigali, Rwanda
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+};

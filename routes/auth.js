@@ -55,7 +55,7 @@ const router = express.Router();
  *       400:
  *         description: User already exists or invalid input
  */
-router.post("/register", register); // Uncomment only when needed
+// router.post("/register", register); // Uncomment only when needed
 
 /**
  * @swagger

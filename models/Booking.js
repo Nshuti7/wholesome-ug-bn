@@ -30,12 +30,22 @@ const BookingSchema = new mongoose.Schema(
       type: String,
       required: [true, "Please add your country"],
       trim: true,
-      maxlength: [3, "Country code cannot be more than 3 characters"],
+      maxlength: [60, "Country cannot be more than 60 characters"],
     },
     preferredTour: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Itinerary",
-      required: false, // Optional field
+      required: false,
+    },
+    preferredExperience: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Experience",
+      required: false,
+    },
+    preferredDestination: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Destination",
+      required: false,
     },
     travelDate: {
       type: Date,

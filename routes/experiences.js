@@ -44,18 +44,36 @@ router.post(
 
       const coverFile = req.files.coverImage[0];
       const addFiles = req.files.additionalImages || [];
-      const { title, description, category, duration, parks = [], highlights = [], featured = false } = req.body;
+      const {
+        title, description, category, duration,
+        parks = [], highlights = [], featured = false,
+        price, currency, priceUnit,
+        difficulty, bestTime, minAge, groupSize,
+        included = [], whatToBring = [],
+      } = req.body;
+
+      const toArr = (v) => (Array.isArray(v) ? v : [v].filter(Boolean));
+      const toNum = (v) => (v === undefined || v === "" || v === null ? undefined : Number(v));
 
       const doc = await Experience.create({
         title,
         description,
         category,
         duration,
-        parks: Array.isArray(parks) ? parks : [parks].filter(Boolean),
-        highlights: Array.isArray(highlights) ? highlights : [highlights].filter(Boolean),
+        parks: toArr(parks),
+        highlights: toArr(highlights),
         featured: featured === "true" || featured === true,
         coverImage: { url: coverFile.path, cloudinaryId: coverFile.filename },
         additionalImages: addFiles.map((f) => ({ url: f.path, cloudinaryId: f.filename })),
+        price: toNum(price),
+        currency,
+        priceUnit,
+        difficulty,
+        bestTime,
+        minAge: toNum(minAge),
+        groupSize,
+        included: toArr(included),
+        whatToBring: toArr(whatToBring),
       });
 
       res.status(201).json({ success: true, data: doc });
@@ -94,13 +112,22 @@ router.put(
         doc.additionalImages = req.files.additionalImages.map((f) => ({ url: f.path, cloudinaryId: f.filename }));
       }
 
-      ["title", "description", "category", "duration"].forEach((f) => {
+      [
+        "title", "description", "category", "duration",
+        "currency", "priceUnit", "difficulty", "bestTime", "groupSize",
+      ].forEach((f) => {
         if (req.body[f] !== undefined) doc[f] = req.body[f];
       });
 
-      ["parks", "highlights"].forEach((f) => {
+      ["parks", "highlights", "included", "whatToBring"].forEach((f) => {
         if (req.body[f] !== undefined) {
           doc[f] = Array.isArray(req.body[f]) ? req.body[f] : [req.body[f]].filter(Boolean);
+        }
+      });
+
+      ["price", "minAge"].forEach((f) => {
+        if (req.body[f] !== undefined) {
+          doc[f] = req.body[f] === "" || req.body[f] === null ? undefined : Number(req.body[f]);
         }
       });
 

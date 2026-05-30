@@ -10,6 +10,8 @@ const router = express.Router();
 const { protect, admin } = require("../middleware/auth");
 const Booking = require("../models/Booking");
 const Itinerary = require("../models/Itinerary");
+const Experience = require("../models/Experience");
+const Destination = require("../models/Destination");
 const { formSubmissionLimiter } = require("../middleware/rateLimiter");
 
 /**
@@ -57,23 +59,26 @@ router.post("/", formSubmissionLimiter, async (req, res) => {
       phoneCountryCode,
       country,
       preferredTour,
+      preferredExperience,
+      preferredDestination,
       travelDate,
       numberOfPeople,
       specialRequests
     } = req.body;
 
-    // Validate preferred tour if provided
     if (preferredTour) {
       const tour = await Itinerary.findById(preferredTour);
-      if (!tour) {
-        return res.status(400).json({
-          success: false,
-          message: "Preferred tour not found"
-        });
-      }
+      if (!tour) return res.status(400).json({ success: false, message: "Preferred tour not found" });
+    }
+    if (preferredExperience) {
+      const exp = await Experience.findById(preferredExperience);
+      if (!exp) return res.status(400).json({ success: false, message: "Preferred experience not found" });
+    }
+    if (preferredDestination) {
+      const dest = await Destination.findById(preferredDestination);
+      if (!dest) return res.status(400).json({ success: false, message: "Preferred destination not found" });
     }
 
-    // Create booking
     const booking = await Booking.create({
       name,
       email,
@@ -81,15 +86,16 @@ router.post("/", formSubmissionLimiter, async (req, res) => {
       phoneCountryCode,
       country,
       preferredTour,
+      preferredExperience,
+      preferredDestination,
       travelDate,
       numberOfPeople,
       specialRequests
     });
 
-    // Populate tour details if preferred tour is provided
-    if (preferredTour) {
-      await booking.populate('preferredTour', 'title daysCount nightsCount');
-    }
+    if (preferredTour) await booking.populate('preferredTour', 'title daysCount nightsCount');
+    if (preferredExperience) await booking.populate('preferredExperience', 'title category');
+    if (preferredDestination) await booking.populate('preferredDestination', 'name region');
 
     res.status(201).json({
       success: true,

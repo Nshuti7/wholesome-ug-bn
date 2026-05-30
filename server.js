@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./swagger-jsdoc-config");
 const applySecurity = require("./middleware/security");
-const { limiter } = require("./middleware/rateLimiter");
+const { apiLimiter } = require("./middleware/rateLimiter");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 
@@ -28,6 +28,7 @@ const experienceRoutes = require("./routes/experiences");
 const testimonialRoutes = require("./routes/testimonials");
 const weatherRoutes = require("./routes/weather");
 const healthRoutes = require("./routes/health");
+const companyRoutes = require("./routes/company");
 
 app.set("trust proxy", 1);
 applySecurity(app);
@@ -61,17 +62,19 @@ app.use(helmet());
 
 
 // Middleware
-app.use(
-  cors({
-    origin: [process.env.FRONTEND_BASE_URL, process.env.ADMIN_BASE_URL],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-app.options("*", cors());
+const corsOptions = {
+  origin: [process.env.FRONTEND_BASE_URL, process.env.ADMIN_BASE_URL],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+
+// Global rate limit on every API route (auth + form routes add stricter caps)
+app.use("/api", apiLimiter);
 // Don't use urlencoded middleware for multipart form data
 // app.use(express.urlencoded({ extended: true }));
 
@@ -95,7 +98,7 @@ app.use("/api/destinations", destinationRoutes);
 app.use("/api/itineraries", itineraryRoutes);
 app.use("/api/gallery", galleryRoutes);
 app.use("/api/newsletter", newsletterRoutes);
-app.use("/api/auth", authRoutes, limiter);
+app.use("/api/auth", authRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/blogs", blogRoutes);
@@ -107,16 +110,21 @@ app.use("/api/experiences", experienceRoutes);
 app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/company", companyRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the Wholesome Uganda API" });
 });
 
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get("/docs-json", (req, res) => {
-  res.setHeader("Content-Type", "application/json");
-  res.send(swaggerSpec);
-});
+// API docs are exposed only outside production to avoid publishing the
+// full API surface to the internet.
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.get("/docs-json", (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.send(swaggerSpec);
+  });
+}
 
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err.stack);

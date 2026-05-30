@@ -13,3 +13,9 @@ check-production.js
 SECURITY_ASSESSMENT.md
 SECURITY_TESTING.md
 config.bat
+
+# Dev/test scratch & generated files
+limiter-test.js
+Running
+swagger-output.json
+templates/email/test.html

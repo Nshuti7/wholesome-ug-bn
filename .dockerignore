@@ -1,0 +1,38 @@
+# Dependencies (reinstalled in the build)
+node_modules
+npm-debug.log
+pnpm-debug.log
+
+# Env & secrets
+.env
+*.env
+config.bat
+
+# Local scratch / uploads
+tmp/
+uploads/
+*.log
+
+# Dev, test & generated files
+limiter-test.js
+Running
+seed.js
+cleanup-tmp.js
+swagger-output.json
+test-security-complete.js
+check-production.js
+templates/email/test.html
+
+# Docs not needed at runtime
+README.md
+*.md
+ENVIRONMENT.md
+UPLOAD_MIGRATION.md
+SECURITY_ASSESSMENT.md
+SECURITY_TESTING.md
+
+# VCS / IDE
+.git
+.gitignore
+.vscode
+.idea

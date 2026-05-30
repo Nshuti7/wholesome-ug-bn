@@ -7,7 +7,7 @@
 
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/auth");
+const { protect, admin } = require("../middleware/auth");
 const Newsletter = require("../models/Newsletter");
 const { formSubmissionLimiter } = require("../middleware/rateLimiter");
 
@@ -150,7 +150,7 @@ router.get("/", protect, async (req, res) => {
  *       400:
  *         description: Bad request
  */
-router.delete("/:id", protect, async (req, res) => {
+router.delete("/:id", protect, admin, async (req, res) => {
   try {
     await Newsletter.findByIdAndDelete(req.params.id);
     res.json({ message: "Subscriber deleted successfully" });

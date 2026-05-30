@@ -16,6 +16,7 @@ const {
   register,
 } = require("../controllers/authController");
 const { protect, admin } = require("../middleware/auth");
+const { authLimiter } = require("../middleware/rateLimiter");
 
 const router = express.Router();
 
@@ -83,7 +84,7 @@ const router = express.Router();
  *       401:
  *         description: Invalid credentials
  */
-router.post("/login", login);
+router.post("/login", authLimiter, login);
 
 /**
  * @swagger
@@ -198,7 +199,7 @@ router.put("/update-password", protect, admin, updatePassword);
  *       404:
  *         description: User not found
  */
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", authLimiter, forgotPassword);
 
 /**
  * @swagger
@@ -228,7 +229,7 @@ router.post("/forgot-password", forgotPassword);
  *       400:
  *         description: Invalid or expired OTP
  */
-router.post("/verify-code", verifyOtp);
+router.post("/verify-code", authLimiter, verifyOtp);
 
 /**
  * @swagger
@@ -261,7 +262,7 @@ router.post("/verify-code", verifyOtp);
  *       404:
  *         description: User not found
  */
-router.post("/reset-password", resetPassword);
+router.post("/reset-password", authLimiter, resetPassword);
 
 /**
  * @swagger

@@ -163,6 +163,8 @@ router.get("/", protect, admin, async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('preferredTour', 'title daysCount nightsCount')
+      .populate('preferredExperience', 'title category')
+      .populate('preferredDestination', 'name region')
       .sort("-createdAt")
       .skip(skip)
       .limit(limit);
@@ -210,7 +212,9 @@ router.get("/", protect, admin, async (req, res) => {
 router.get("/:id", protect, admin, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate('preferredTour', 'title daysCount nightsCount description backgroundImage');
+      .populate('preferredTour', 'title daysCount nightsCount description backgroundImage')
+      .populate('preferredExperience', 'title category')
+      .populate('preferredDestination', 'name region');
 
     if (!booking) {
       return res.status(404).json({
@@ -295,7 +299,10 @@ router.put("/:id", protect, admin, async (req, res) => {
         new: true,
         runValidators: true
       }
-    ).populate('preferredTour', 'title daysCount nightsCount');
+    )
+      .populate('preferredTour', 'title daysCount nightsCount')
+      .populate('preferredExperience', 'title category')
+      .populate('preferredDestination', 'name region');
 
     if (!booking) {
       return res.status(404).json({

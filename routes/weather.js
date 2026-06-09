@@ -403,13 +403,32 @@ router.get('/country', async (req, res) => {
       });
     }
 
-    const clientIP = getClientIP(req);
-    
-    // Use the check endpoint for automatic IP detection
-    const response = await axios.get(`http://api.ipapi.com/check?access_key=${IPAPI_ACCESS_KEY}`, {
-      timeout: 10000
-    });
-    
+    // Prefer the IP explicitly forwarded by the frontend proxy (the real
+    // visitor's IP); fall back to the request's own client IP.
+    const clientIP = (req.query.ip || getClientIP(req) || "").toString().trim();
+
+    // Reject missing/loopback/private IPs. Looking those up — or using ipapi's
+    // /check endpoint — would geolocate this server, not the visitor, which is
+    // exactly the bug we're avoiding. Better to return "no detection" so the
+    // form simply skips autofill than to report a wrong country.
+    const isUsablePublicIp =
+      clientIP &&
+      !/^(127\.|10\.|192\.168\.|169\.254\.|::1$|fc00:|fd00:|fe80:)/i.test(clientIP) &&
+      !/^172\.(1[6-9]|2\d|3[01])\./.test(clientIP);
+
+    if (!isUsablePublicIp) {
+      return res.status(200).json({
+        success: false,
+        message: 'Could not determine visitor IP for country detection'
+      });
+    }
+
+    // Look up the specific visitor IP (not /check, which detects the caller).
+    const response = await axios.get(
+      `http://api.ipapi.com/${encodeURIComponent(clientIP)}?access_key=${IPAPI_ACCESS_KEY}`,
+      { timeout: 10000 }
+    );
+
     if (response.data && response.data.country_code) {
       res.json({
         success: true,

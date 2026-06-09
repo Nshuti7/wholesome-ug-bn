@@ -9,29 +9,29 @@ const imageSubSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Brand-neutral categories for the rebrand (Travel · Art · Storytelling).
+// Kept as a superset that still includes the original safari values so any
+// existing rows keep validating.
 const EXPERIENCE_CATEGORIES = [
+  "Cultural Experience",
+  "Adventure",
+  "Nature",
+  "Photography",
+  "Art & Craft",
+  "Workshop",
+  "City & Markets",
+  "Food & Drink",
+  "Music & Performance",
+  "Scenic",
+  "Community",
+  // Legacy safari values — retained so older experiences still validate.
   "Gorilla Trekking",
   "Chimpanzee Tracking",
   "Bird Watching",
   "Boat Safari",
   "Nature Walk",
-  "Cultural Experience",
-  "Adventure",
-  "Photography",
   "Scenic Drive",
   "Conservation Tour",
-];
-
-const PARKS = [
-  "Bwindi Impenetrable",
-  "Queen Elizabeth",
-  "Murchison Falls",
-  "Kidepo Valley",
-  "Lake Mburo",
-  "Mount Elgon",
-  "Kibale",
-  "Semuliki",
-  "Rwenzori",
 ];
 
 const CURRENCIES = ["USD", "EUR", "GBP"];
@@ -49,7 +49,8 @@ const experienceSchema = new mongoose.Schema(
       trim: true,
     },
     duration: { type: String, trim: true },
-    parks: { type: [String], enum: PARKS, default: [] },
+    // Free-form regions/places (no longer constrained to national parks).
+    parks: { type: [String], default: [] },
     highlights: { type: [String], default: [] },
     coverImage: { type: imageSubSchema, required: true },
     additionalImages: { type: [imageSubSchema], default: [] },
@@ -74,7 +75,6 @@ const experienceSchema = new mongoose.Schema(
 );
 
 experienceSchema.statics.EXPERIENCE_CATEGORIES = EXPERIENCE_CATEGORIES;
-experienceSchema.statics.PARKS = PARKS;
 experienceSchema.statics.CURRENCIES = CURRENCIES;
 experienceSchema.statics.PRICE_UNITS = PRICE_UNITS;
 experienceSchema.statics.DIFFICULTIES = DIFFICULTIES;

@@ -29,6 +29,7 @@ const testimonialRoutes = require("./routes/testimonials");
 const weatherRoutes = require("./routes/weather");
 const healthRoutes = require("./routes/health");
 const companyRoutes = require("./routes/company");
+const showcaseRoutes = require("./routes/showcase");
 
 app.set("trust proxy", 1);
 applySecurity(app);
@@ -111,6 +112,7 @@ app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/weather", weatherRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/company", companyRoutes);
+app.use("/api/showcase", showcaseRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the Wholesome Uganda API" });

@@ -9,8 +9,16 @@ const { findItinerariesForDestination, getAllItineraryDestinations, getDestinati
 const { handleUploadOptional, handleUploadArrayOptional } = require("../middleware/handleUploadOptional");
 const handleUpload = require("../middleware/handleUpload");
 const upload = require("../middleware/upload");
+const { extractLatLng } = require("../utils/extractLatLng");
 
 const router = express.Router();
+
+// Parse a form value to a finite number, or undefined when blank/invalid.
+const toNum = (v) => {
+  if (v === undefined || v === null || v === "") return undefined;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : undefined;
+};
 
 // ─── SWAGGER COMPONENTS ────────────────────────────────────────────────────────
 /**
@@ -516,12 +524,28 @@ router.post(
       };
 
       const normalizedRegion = normalizeRegion(region);
-      const normalizedAttractions = Array.isArray(attractions) 
+      const normalizedAttractions = Array.isArray(attractions)
         ? attractions.map(normalizeAttraction)
         : [normalizeAttraction(attractions)].filter(Boolean);
-      const normalizedWildlife = Array.isArray(wildlife) 
-        ? wildlife 
+      const normalizedWildlife = Array.isArray(wildlife)
+        ? wildlife
         : [wildlife].filter(Boolean);
+
+      // Coordinates: use explicit values when given; otherwise derive them
+      // from the Google Maps link so the admin doesn't enter them twice.
+      let lat = toNum(latitude);
+      let lng = toNum(longitude);
+      if ((lat === undefined || lng === undefined) && googleMapsLink) {
+        try {
+          const coords = await extractLatLng(googleMapsLink);
+          if (coords) {
+            if (lat === undefined) lat = coords.latitude;
+            if (lng === undefined) lng = coords.longitude;
+          }
+        } catch (e) {
+          console.warn("extractLatLng (create) failed:", e.message);
+        }
+      }
 
       // Upload background
       const bgRes = await cloudinary.uploader.upload(bgFile.path, {
@@ -551,8 +575,8 @@ router.post(
         region: normalizedRegion,
         bestTimeToVisit,
         climate,
-        latitude,
-        longitude,
+        latitude: lat,
+        longitude: lng,
         destinationType,
         featured: featured === 'true' || featured === true,
         attractions: normalizedAttractions,
@@ -761,6 +785,26 @@ router.put(
         }
       });
 
+      // Coordinates: keep explicit values; otherwise derive from the maps link.
+      // Blank strings are dropped so they don't overwrite stored coords or
+      // trigger a Number cast error.
+      const lat = toNum(req.body.latitude);
+      const lng = toNum(req.body.longitude);
+      const link = req.body.googleMapsLink || dest.googleMapsLink;
+      if ((lat === undefined || lng === undefined) && link) {
+        try {
+          const coords = await extractLatLng(link);
+          if (coords) {
+            req.body.latitude = lat === undefined ? coords.latitude : lat;
+            req.body.longitude = lng === undefined ? coords.longitude : lng;
+          }
+        } catch (e) {
+          console.warn("extractLatLng (update) failed:", e.message);
+        }
+      }
+      if (req.body.latitude === "" || req.body.latitude === undefined) delete req.body.latitude;
+      if (req.body.longitude === "" || req.body.longitude === undefined) delete req.body.longitude;
+
       dest = await Destination.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
         runValidators: true,
@@ -884,10 +928,61 @@ router.get("/tours/:destinationName", async (req, res) => {
     });
   } catch (err) {
     console.error("GET /destinations/tours/:destinationName error:", err);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to fetch tours for destination." 
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch tours for destination."
     });
+  }
+});
+
+/**
+ * @swagger
+ * /destinations/extract-coordinates:
+ *   post:
+ *     summary: Derive latitude/longitude from a Google Maps link
+ *     tags: [Destinations]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [url]
+ *             properties:
+ *               url:
+ *                 type: string
+ *                 description: A Google Maps share link, place URL, or embed iframe/src
+ *     responses:
+ *       200:
+ *         description: Extracted coordinates, or success=false if none could be parsed
+ *       400:
+ *         description: Missing url
+ */
+router.post("/extract-coordinates", protect, admin, async (req, res) => {
+  try {
+    const { url } = req.body || {};
+    if (!url || typeof url !== "string") {
+      return res
+        .status(400)
+        .json({ success: false, message: "A 'url' string is required." });
+    }
+
+    const coords = await extractLatLng(url);
+    if (!coords) {
+      return res.status(200).json({
+        success: false,
+        message: "Could not find coordinates in that link.",
+      });
+    }
+
+    res.status(200).json({ success: true, data: coords });
+  } catch (err) {
+    console.error("POST /destinations/extract-coordinates error:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to extract coordinates." });
   }
 });
 

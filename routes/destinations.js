@@ -6,8 +6,6 @@ const Destination = require("../models/Destination");
 const Itinerary = require("../models/Itinerary");
 const { protect, admin } = require("../middleware/auth");
 const { findItinerariesForDestination, getAllItineraryDestinations, getDestinationStats } = require("../utils/destinationUtils");
-const { handleUploadOptional, handleUploadArrayOptional } = require("../middleware/handleUploadOptional");
-const handleUpload = require("../middleware/handleUpload");
 const upload = require("../middleware/upload");
 const { extractLatLng } = require("../utils/extractLatLng");
 
@@ -734,8 +732,23 @@ router.put(
   "/:id",
   protect,
   admin,
-  handleUploadOptional("backgroundImage"),
-  handleUploadArrayOptional("additionalImages", 5),
+  // Both images are optional on edit. Use ONE multer pass (upload.fields) —
+  // chaining two multer middlewares on a single request consumes the body
+  // stream twice and fails with "Upload failed." even for text-only edits.
+  (req, res, next) => {
+    upload.fields([
+      { name: "backgroundImage", maxCount: 1 },
+      { name: "additionalImages", maxCount: 5 },
+    ])(req, res, (err) => {
+      if (err) {
+        console.error("PUT /destinations upload error:", err);
+        return res
+          .status(400)
+          .json({ success: false, message: err.message || "File upload error" });
+      }
+      next();
+    });
+  },
   async (req, res) => {
     try {
       let dest = await Destination.findById(req.params.id);
@@ -745,28 +758,30 @@ router.put(
           .json({ success: false, message: "Destination not found." });
       }
 
-      // Replace backgroundImage if provided
-      if (req.file) {
+      const bgFile = req.files?.backgroundImage?.[0];
+      const addFiles = req.files?.additionalImages || [];
+
+      // Replace backgroundImage only if a new one was uploaded.
+      if (bgFile) {
         await cloudinary.uploader.destroy(dest.backgroundImage.cloudinaryId);
-        const bgRes = await cloudinary.uploader.upload(
-          req.file.path,
-          { folder: "wholesome/destinations" }
-        );
+        const bgRes = await cloudinary.uploader.upload(bgFile.path, {
+          folder: "wholesome/destinations",
+        });
         req.body.backgroundImage = {
           url: bgRes.secure_url,
           cloudinaryId: bgRes.public_id,
         };
       }
 
-      // Replace additionalImages if provided
-      if (req.files && req.files.length) {
+      // Replace additionalImages only if new ones were uploaded.
+      if (addFiles.length) {
         await Promise.all(
           dest.additionalImages.map((img) =>
             cloudinary.uploader.destroy(img.cloudinaryId)
           )
         );
         const newAdds = await Promise.all(
-          req.files.map((f) =>
+          addFiles.map((f) =>
             cloudinary.uploader.upload(f.path, {
               folder: "wholesome/destinations",
             })

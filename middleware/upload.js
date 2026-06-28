@@ -1,32 +1,22 @@
-const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
-require("dotenv").config();
+const createStorage = require("./cloudinaryStorage");
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Compress-then-upload to Cloudinary (see cloudinaryStorage.js). sharp downsizes
+// each file before it leaves the server, so the original never has to fit
+// Cloudinary's per-image upload ceiling.
+const storage = createStorage({ folder: "wholesome" });
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "wholesome",
-    allowed_formats: ["jpeg", "png", "jpg", "webp"],
-    // Incoming transformation: Cloudinary downsizes on ingest so the stored
-    // asset stays small (caps storage cost + speeds the next/image optimizer
-    // fetch). `crop: "limit"` only shrinks oversized photos, never upscales.
-    transformation: [
-      { width: 2400, height: 2400, crop: "limit", quality: "auto:good" },
-    ],
-  },
-});
+const ALLOWED = /^image\/(jpe?g|png|webp)$/;
 
 const upload = multer({
   storage,
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED.test(file.mimetype)) return cb(null, true);
+    cb(new Error("Only JPG, PNG, or WebP images are allowed."));
+  },
   limits: {
-    // Accept full-size phone/camera photos; Cloudinary compresses them above.
+    // Accept full-size phone/camera photos; sharp compresses them above before
+    // anything reaches Cloudinary.
     fileSize: 20 * 1024 * 1024,
   },
 });

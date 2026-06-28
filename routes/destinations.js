@@ -659,7 +659,7 @@ router.post(
       if (err.http_code === 413 || err.message?.includes('file size')) {
         return res.status(413).json({ 
           success: false, 
-          message: "Files are too large. Please use images smaller than 5MB each." 
+          message: "Files are too large. Please use images smaller than 20MB each." 
         });
       }
       

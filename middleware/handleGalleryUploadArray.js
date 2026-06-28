@@ -9,7 +9,7 @@ const handleGalleryUploadArray = (fieldName, maxCount) => {
           return res
             .status(400)
             .json({
-              error: "One or more files are too large. Max 5MB per file.",
+              error: "One or more files are too large. Max 20MB per file.",
             });
         }
         return res.status(400).json({ error: err.message });

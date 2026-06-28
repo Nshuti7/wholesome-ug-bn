@@ -14,13 +14,20 @@ const storage = new CloudinaryStorage({
   params: {
     folder: "wholesome",
     allowed_formats: ["jpeg", "png", "jpg", "webp"],
+    // Incoming transformation: Cloudinary downsizes on ingest so the stored
+    // asset stays small (caps storage cost + speeds the next/image optimizer
+    // fetch). `crop: "limit"` only shrinks oversized photos, never upscales.
+    transformation: [
+      { width: 2400, height: 2400, crop: "limit", quality: "auto:good" },
+    ],
   },
 });
 
 const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    // Accept full-size phone/camera photos; Cloudinary compresses them above.
+    fileSize: 20 * 1024 * 1024,
   },
 });
 

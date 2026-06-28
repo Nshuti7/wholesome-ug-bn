@@ -34,7 +34,7 @@ module.exports = (app) => {
   // Request size limits to prevent large payload attacks
   app.use((req, res, next) => {
     const contentLength = parseInt(req.headers['content-length'] || '0');
-    if (contentLength > 50 * 1024 * 1024) { // 50MB limit to accommodate multiple 5MB files
+    if (contentLength > 130 * 1024 * 1024) { // 130MB: a destination edit sends up to 6 images at the 20MB/file multer cap
       return res.status(413).json({ 
         message: 'Request entity too large' 
       });

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Wholesome Uganda — backend image.
+# Ubuntu Footprints — backend image.
 # Multi-stage so the runtime layer carries only prod deps + source (no pnpm
 # store, no dev deps, no build toolchain). Much smaller than a Nixpacks image.
 # ─────────────────────────────────────────────────────────────────────────────

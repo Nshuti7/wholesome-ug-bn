@@ -5,7 +5,7 @@ module.exports = (name, otp) => {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Password Reset</title>
+    <title>Password Reset — Ubuntu Footprints</title>
     <style>
       body {
         font-family: "Segoe UI", Arial, sans-serif;
@@ -26,20 +26,24 @@ module.exports = (name, otp) => {
       }
 
       .header {
-        background-color: #87f475;
-        padding: 20px;
+        background-color: #15120F;
+        padding: 26px 20px;
         text-align: center;
       }
 
-      .logo {
-        max-height: 60px;
-        margin-bottom: 10px;
+      .wordmark {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        color: #ffffff;
+        margin: 0;
       }
+      .wordmark span { color: #F69E06; }
 
       .content {
         padding: 30px;
       }
-        
+
       h2 {
         color: #2c3e50;
         margin-top: 0;
@@ -47,18 +51,18 @@ module.exports = (name, otp) => {
         font-weight: 600;
       }
       .otp-container {
-        background-color: #f5f8fa;
+        background-color: #fff7e9;
         border-radius: 6px;
         padding: 20px;
         text-align: center;
         margin: 25px 0;
-        border-left: 4px solid #3498db;
+        border-left: 4px solid #F69E06;
       }
       .otp {
         font-size: 28px;
         font-weight: bold;
         letter-spacing: 2px;
-        color: #2c3e50;
+        color: #15120F;
         font-family: "Courier New", monospace;
       }
       .note {
@@ -68,7 +72,7 @@ module.exports = (name, otp) => {
       }
       .warning {
         background-color: #fff8e1;
-        border-left: 4px solid #ffc107;
+        border-left: 4px solid #F69E06;
         padding: 12px 15px;
         margin: 25px 0;
         font-size: 14px;
@@ -88,7 +92,7 @@ module.exports = (name, otp) => {
       .social-links a {
         display: inline-block;
         margin: 0 8px;
-        color: #3498db;
+        color: #B45309;
         text-decoration: none;
       }
       @media only screen and (max-width: 480px) {
@@ -101,11 +105,7 @@ module.exports = (name, otp) => {
   <body>
     <div class="container">
       <div class="header">
-        <img
-          src="https://res.cloudinary.com/drgt9tavz/image/upload/v1747676665/ymm54sozbitqoqgf4djv.png"
-          alt="Agukanet logo"
-          class="logo"
-        />
+        <p class="wordmark">UBUNTU <span>FOOTPRINTS</span></p>
       </div>
 
       <div class="content">
@@ -113,7 +113,7 @@ module.exports = (name, otp) => {
 
         <p>
           You recently requested to reset your password for your
-          <strong>Wholesome Uganda Admin</strong> account. Use the One-Time
+          <strong>Ubuntu Footprints Admin</strong> account. Use the One-Time
           Password (OTP) below to complete the process.
         </p>
 
@@ -126,7 +126,7 @@ module.exports = (name, otp) => {
 
         <p>
           If you're having issues, you can contact our support team directly at
-          <a href="mailto:support@agukanet.com">support@agukanet.com</a>
+          <a href="mailto:support@ubuntufootprints.com">support@ubuntufootprints.com</a>
         </p>
 
         <div class="warning">
@@ -134,17 +134,17 @@ module.exports = (name, otp) => {
           contact our support team immediately as your account may be at risk.
         </div>
 
-        <p>Thank you,<br />COM ONLINE support Team</p>
+        <p>Thank you,<br />The Ubuntu Footprints Team</p>
       </div>
 
       <div class="footer">
-        <p>© 2025 COM ONLINE. All rights reserved.</p>
-        <p>This is an automated message, please do not reply to this email.</p>
+        <p>© 2026 Ubuntu Footprints. All rights reserved.</p>
+        <p>Kampala, Uganda · This is an automated message, please do not reply.</p>
 
         <div class="social-links">
-          <a href="https://facebook.com/comagency">Facebook</a> •
-          <a href="https://twitter.com/comagency">Twitter</a> •
-          <a href="https://linkedin.com/company/comagency">LinkedIn</a>
+          <a href="https://facebook.com/ubuntufootprints">Facebook</a> •
+          <a href="https://x.com/ubuntufootprints">X</a> •
+          <a href="https://instagram.com/ubuntufootprints">Instagram</a>
         </div>
       </div>
     </div>

@@ -28,7 +28,7 @@ module.exports = (
     }
     .header-band {
       height: 8px;
-      background: linear-gradient(90deg, #3b82f6, #6366f1);
+      background: linear-gradient(90deg, #F69E06, #D98604);
     }
     .header {
       padding: 30px 25px 20px;
@@ -43,7 +43,7 @@ module.exports = (
       padding: 35px 40px;
     }
     .title {
-      color: #1e40af;
+      color: #15120F;
       font-size: 24px;
       font-weight: 600;
       margin-bottom: 25px;
@@ -53,7 +53,7 @@ module.exports = (
       border-radius: 8px;
       padding: 20px;
       margin: 25px 0;
-      border-left: 4px solid #3b82f6;
+      border-left: 4px solid #F69E06;
     }
     .user-details {
       display: grid;
@@ -83,8 +83,8 @@ module.exports = (
     }
     .action-button {
       display: inline-block;
-      background: #3b82f6;
-      color: white;
+      background: #F69E06;
+      color: #15120F;
       text-decoration: none;
       padding: 12px 28px;
       border-radius: 6px;
@@ -93,7 +93,7 @@ module.exports = (
       transition: background 0.2s;
     }
     .action-button:hover {
-      background: #2563eb;
+      background: #D98604;
     }
     .divider {
       height: 1px;
@@ -150,19 +150,19 @@ module.exports = (
   <div class="wrapper">
     <div class="header-band"></div>
     <div class="header">
-      <img src="https://res.cloudinary.com/drgt9tavz/image/upload/v1747676665/ymm54sozbitqoqgf4djv.png" alt="Agukanet logo" class="logo"/>
+      <p style="margin:0;font-size:22px;font-weight:800;letter-spacing:2px;color:#15120F;">UBUNTU <span style="color:#F69E06;">FOOTPRINTS</span></p>
     </div>
     <div class="main-content">
       <h1 class="title">Password Successfully Updated</h1>
       
       <p>Hello ${name},</p>
       
-      <p>We're confirming that your Wholesome Uganda Admin account password has been changed successfully. Your account security is important to us.</p>
+      <p>We're confirming that your Ubuntu Footprints Admin account password has been changed successfully. Your account security is important to us.</p>
 
       <div class="detail-box">
         <div class="user-details">
           <span class="label">Account:</span>
-          <span class="value">Wholesome Uganda Admin Portal</span>
+          <span class="value">Ubuntu Footprints Admin Portal</span>
           
           <span class="label">User ID:</span>
           <span class="value">${userId}</span>
@@ -179,7 +179,7 @@ module.exports = (
         <span class="alert-icon">⚠️</span>
         <strong>Didn't request this change?</strong>
         <p>If you did not initiate this password update, your account may be compromised. Please take immediate action to secure your account.</p>
-        <a href="mailto:support@agukanet.com" class="action-button">Email Support</a>
+        <a href="mailto:support@ubuntufootprints.com" class="action-button">Email Support</a>
       </div>
       
       <div class="divider"></div>
@@ -191,22 +191,22 @@ module.exports = (
         <li>Checking for any unusual account activity</li>
       </ul>
       
-      <p class="help-text">If you need assistance, our support team is available 24/7 at <a href="mailto:support@agukanet.com">support@agukanet.com</a> or call (+250)784811494</p>
+      <p class="help-text">If you need assistance, our support team is available 24/7 at <a href="mailto:support@ubuntufootprints.com">support@ubuntufootprints.com</a></p>
     </div>
     
     <div class="footer">
       <div class="social-links">
-        <a href="https://facebook.com/comagency" class="social-button">f</a>
-        <a href="https://twitter.com/comagency" class="social-button">t</a>
-        <a href="https://linkedin.com/company/comagency" class="social-button">in</a>
-        <a href="https://instagram.com/comagency" class="social-button">ig</a>
+        <a href="https://facebook.com/ubuntufootprints" class="social-button">f</a>
+        <a href="https://x.com/ubuntufootprints" class="social-button">t</a>
+        <a href="https://linkedin.com/company/ubuntufootprints" class="social-button">in</a>
+        <a href="https://instagram.com/ubuntufootprints" class="social-button">ig</a>
       </div>
       
-      <p>© 2025 COM ONLINE. All rights reserved.</p>
+      <p>© 2026 Ubuntu Footprints. All rights reserved.</p>
       <p>This is an automated message, please do not reply.</p>
       
       <div class="address">
-        COM ONLINE ,Office Gikondo/73/kk/569/street, Kigali, Rwanda
+        Ubuntu Footprints · Kololo Hill, Kampala, Uganda
       </div>
     </div>
   </div>

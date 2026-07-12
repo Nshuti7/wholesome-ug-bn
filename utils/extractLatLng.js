@@ -75,7 +75,7 @@ async function expandUrl(url) {
       maxRedirects: 5,
       timeout: 8000,
       // A browser-like UA so Google returns the place URL, not a consent wall.
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; WholesomeBot/1.0)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; UbuntuFootprintsBot/1.0)" },
       validateStatus: (s) => s >= 200 && s < 400,
     });
     return resp.request?.res?.responseUrl || resp.request?.responseURL || url;

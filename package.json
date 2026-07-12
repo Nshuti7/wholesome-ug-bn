@@ -1,7 +1,7 @@
 {
-  "name": "wholesome-backend",
+  "name": "ubuntu-footprints-backend",
   "version": "1.0.0",
-  "description": "Backend for Wholesome Uganda",
+  "description": "Backend for Ubuntu Footprints",
   "main": "server.js",
   "packageManager": "pnpm@9.15.9",
   "engines": {
@@ -13,7 +13,7 @@
     "seed": "node seed.js",
     "cleanup": "node cleanup-tmp.js",
     "test:security": "node test-security-complete.js",
-    "test:security:prod": "cross-env TEST_BASE_URL=https://api.wholesomeug.com node test-security-complete.js",
+    "test:security:prod": "cross-env TEST_BASE_URL=https://api.ubuntufootprints.com node test-security-complete.js",
     "test:security:prod2": "cross-env TEST_BASE_URL=https://bntest.spiritrevivaltemple.org node test-security-complete.js",
     "check-prod": "node check-production.js"
   },

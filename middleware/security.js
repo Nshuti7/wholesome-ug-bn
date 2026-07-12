@@ -49,7 +49,7 @@ module.exports = (app) => {
     
     // Add server time headers
     res.setHeader('Date', new Date().toUTCString());
-    res.setHeader('Server', 'Wholesome-Uganda-API');
+    res.setHeader('Server', 'Ubuntu-Footprints-API');
     
     // Additional security headers
     res.setHeader('X-Content-Type-Options', 'nosniff');

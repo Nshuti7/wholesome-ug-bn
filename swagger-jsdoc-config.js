@@ -3,9 +3,9 @@ const swaggerJSDoc = require("swagger-jsdoc");
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "Wholesome Uganda API Docs",
+    title: "Ubuntu Footprints API Docs",
     version: "1.0.0",
-    description: "Full API documentation for Wholesome Uganda website",
+    description: "Full API documentation for Ubuntu Footprints website",
   },
   servers: [
     {

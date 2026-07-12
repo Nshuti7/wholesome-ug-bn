@@ -1,3 +1,3 @@
-# wholesome-bn
+# ubuntu-footprints-bn
 
-Backend API for Wholesome Uganda tourism platform.
+Backend API for Ubuntu Footprints tourism platform.

@@ -517,7 +517,7 @@ const blogs = [
 ];
 
 const team = [
-  { fullName: "Joseph Mukasa", position: "Founder & Lead Guide", bio: "Founded Wholesome Uganda in 2014 after a decade guiding for the larger operators. Holds the senior UWA guide certification and has led over 200 gorilla trekking parties. Based in Kampala, often on the road.", linkedIn: "https://linkedin.com/in/joseph-mukasa-wholesome", category: "Leadership", image: "/photos/why-guides-vehicles.jpg", cloudinaryId: "mock/team-joseph" },
+  { fullName: "Joseph Mukasa", position: "Founder & Lead Guide", bio: "Founded Ubuntu Footprints in 2014 after a decade guiding for the larger operators. Holds the senior UWA guide certification and has led over 200 gorilla trekking parties. Based in Kampala, often on the road.", linkedIn: "https://linkedin.com/in/joseph-mukasa-ubuntu", category: "Leadership", image: "/photos/why-guides-vehicles.jpg", cloudinaryId: "mock/team-joseph" },
   { fullName: "Annet Nakato", position: "Operations Director", bio: "Runs the back office — permits, lodges, logistics, the parts that keep trips on the road. Joined the team in 2017 from Volcanoes Safaris.", linkedIn: "https://linkedin.com/in/annet-nakato", category: "Operations", image: "/photos/why-baby-gorilla.jpg", cloudinaryId: "mock/team-annet" },
   { fullName: "Patrick Kintu", position: "Head of Guiding", bio: "Twelve years guiding across all of Uganda's parks, specialty in the northern circuit (Murchison, Kidepo). Patrick leads our most senior trips and trains incoming guides.", linkedIn: "https://linkedin.com/in/patrick-kintu", category: "Leadership", image: "/photos/exp-safari-lions.jpg", cloudinaryId: "mock/team-patrick" },
   { fullName: "Sarah Birungi", position: "Senior Guide · Western Circuit", bio: "Sarah grew up in Kabale, on the edge of Bwindi. She has been guiding gorilla treks for nine years and speaks Rufumbira, Kiga, and English fluently. Her family was among the first park-edge co-op members.", linkedIn: "https://linkedin.com/in/sarah-birungi", category: "Operations", image: "/photos/exp-bwindi-silverback.jpg", cloudinaryId: "mock/team-sarah" },
@@ -529,7 +529,7 @@ const team = [
 
 const testimonials = [
   { name: "Eleanor Whitfield", location: "London, UK", trip: "Twelve Days, Five Parks", headline: "The country, not a slice of it.", quote: "Joseph and his team built us the trip we'd been describing badly to other operators for years. Twelve days, five parks, and somehow it never felt rushed. The gorilla morning in Bwindi was the most quietly extraordinary thing I've done.", rating: 5, featured: true },
-  { name: "Marcus Tanaka", location: "Toronto, Canada", trip: "Gorillas & the Western Arc", headline: "Quietly extraordinary.", quote: "I've done safaris in Kenya, Tanzania, Botswana. Uganda is different — denser, greener, more human. The Wholesome team understood I wasn't here for a checklist. They gave us space to be still, especially at Ishasha.", rating: 5, featured: true },
+  { name: "Marcus Tanaka", location: "Toronto, Canada", trip: "Gorillas & the Western Arc", headline: "Quietly extraordinary.", quote: "I've done safaris in Kenya, Tanzania, Botswana. Uganda is different — denser, greener, more human. The Ubuntu Footprints team understood I wasn't here for a checklist. They gave us space to be still, especially at Ishasha.", rating: 5, featured: true },
   { name: "Sofia Hernández", location: "Madrid, Spain", trip: "Bwindi in Three Days", headline: "Permits, flights, every detail.", quote: "We had three days. They made it possible — permits, the bush flight, two perfect nights at the lodge. The trek itself took five hours. The hour with the gorillas felt like five minutes.", rating: 5, featured: true },
   { name: "James Okello", location: "Nairobi, Kenya", trip: "Karamoja Cultural Loop", headline: "Travel that respects the place.", quote: "I'm from this region and I was nervous about how the Karamoja visit would be framed. It was handled with real care — by local guides, on terms set by the communities. That matters. It's why I'd send my own family with them.", rating: 5, featured: false },
   { name: "Priya Nair", location: "Mumbai, India", trip: "Murchison & the North", headline: "The Nile, up close.", quote: "Five nights up north — Murchison and Kidepo. The walk to the top of the falls is something I'll think about for years. The Kidepo light at sundown is something else entirely. Worth the long drive.", rating: 5, featured: true },
@@ -537,30 +537,30 @@ const testimonials = [
 ];
 
 const companyDoc = {
-  name: "Wholesome Uganda",
+  name: "Ubuntu Footprints",
   description: "Premium guided adventure across Uganda since 2014. Kampala — Jinja — Bwindi.",
   isActive: true,
   contact: {
     primaryPhone: "+256 414 000 000",
     whatsappNumber: "+256 700 000 000",
-    primaryEmail: "hello@wholesomeuganda.com",
-    planEmail: "plan@wholesomeuganda.co",
-    legalEmail: "legal@wholesomeuganda.com",
-    privacyEmail: "privacy@wholesomeuganda.com",
+    primaryEmail: "hello@ubuntufootprints.com",
+    planEmail: "plan@ubuntufootprints.com",
+    legalEmail: "legal@ubuntufootprints.com",
+    privacyEmail: "privacy@ubuntufootprints.com",
     officeAddress: "Kololo Hill, Kampala",
     officeHours: "Mon — Sat · 8 am — 6 pm EAT",
     responseTime: "Within 24 hours",
   },
   social: {
-    instagram: "https://instagram.com/wholesomeuganda",
-    x: "https://x.com/wholesomeuganda",
-    facebook: "https://facebook.com/wholesomeuganda",
-    linkedin: "https://linkedin.com/company/wholesomeuganda",
-    tripadvisor: "https://tripadvisor.com/wholesomeuganda",
-    tiktok: "https://tiktok.com/@wholesomeuganda",
+    instagram: "https://instagram.com/ubuntufootprints",
+    x: "https://x.com/ubuntufootprints",
+    facebook: "https://facebook.com/ubuntufootprints",
+    linkedin: "https://linkedin.com/company/ubuntufootprints",
+    tripadvisor: "https://tripadvisor.com/ubuntufootprints",
+    tiktok: "https://tiktok.com/@ubuntufootprints",
   },
   meta: {
-    legalName: "Wholesome Uganda Ltd.",
+    legalName: "Ubuntu Footprints Ltd.",
     foundedYear: "2014",
     tagline: "Six parks, one country.",
   },

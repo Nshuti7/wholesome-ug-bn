@@ -115,7 +115,7 @@ app.use("/api/company", companyRoutes);
 app.use("/api/showcase", showcaseRoutes);
 
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to the Wholesome Uganda API" });
+  res.json({ message: "Welcome to the Ubuntu Footprints API" });
 });
 
 // API docs are exposed only outside production to avoid publishing the
@@ -141,7 +141,7 @@ const server = app.listen(PORT, HOST, () => {
     console.log(`Server running at http://localhost:${PORT}`);
     console.log(`Swagger docs available at http://localhost:${PORT}/api-docs`);
     console.log(
-      `Swagger docs available at https://api.wholesomeug.com/api-docs`
+      `Swagger docs available at https://api.ubuntufootprints.com/api-docs`
     );
   } else {
     console.log(`Server running on port ${PORT}`);

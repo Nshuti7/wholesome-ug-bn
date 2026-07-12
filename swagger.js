@@ -4,9 +4,9 @@ import fs from "fs";
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "Wholesome Uganda API Docs",
+    title: "Ubuntu Footprints API Docs",
     version: "1.0.0",
-    description: "API documentation for Wholesome Uganda website",
+    description: "API documentation for Ubuntu Footprints website",
   },
   servers: [
     {
@@ -14,7 +14,7 @@ const swaggerDefinition = {
       description: "Local dev server",
     },
     {
-      url: "https://api.wholesomeug.com/api",
+      url: "https://api.ubuntufootprints.com/api",
       description: "Production server",
     },
   ],

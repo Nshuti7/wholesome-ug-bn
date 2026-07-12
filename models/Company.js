@@ -63,7 +63,7 @@ companySchema.statics.getOrCreateCompany = async function() {
 
   if (!company) {
     company = await this.create({
-      name: "Wholesome Uganda",
+      name: "Ubuntu Footprints",
       description: "Your trusted partner for unforgettable travel experiences in Uganda"
     });
   }

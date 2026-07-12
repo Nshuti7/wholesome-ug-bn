@@ -538,7 +538,7 @@ const testimonials = [
 
 const companyDoc = {
   name: "Ubuntu Footprints",
-  description: "Premium guided adventure across Uganda since 2014. Kampala — Jinja — Bwindi.",
+  description: "A cultural brand from Kampala — curated travel, original African art, and creative storytelling. Walk together, lift together, grow together.",
   isActive: true,
   contact: {
     primaryPhone: "+256 414 000 000",
@@ -562,7 +562,7 @@ const companyDoc = {
   meta: {
     legalName: "Ubuntu Footprints Ltd.",
     foundedYear: "2014",
-    tagline: "Six parks, one country.",
+    tagline: "Walk together. Lift together. Grow together.",
   },
   almanac: {
     permitAvailability: "4 remaining · Q2",

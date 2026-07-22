@@ -43,8 +43,13 @@ router.get("/", async (req, res) => {
         3: "disconnecting"
       };
       
+      // Anything other than "connected" is UNHEALTHY, not degraded. Redis can
+      // degrade gracefully (it has in-memory fallback storage); Mongo cannot —
+      // without it every query just buffers and times out after 10s. Reporting
+      // this as degraded returned HTTP 200, so the Docker HEALTHCHECK passed and
+      // a container with a dead connection was never restarted.
       healthStatus.services.mongodb = {
-        status: mongoStatus === 1 ? "healthy" : "degraded",
+        status: mongoStatus === 1 ? "healthy" : "unhealthy",
         state: mongoStates[mongoStatus] || "unknown",
         connected: mongoStatus === 1
       };

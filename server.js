@@ -79,20 +79,35 @@ app.use("/api", apiLimiter);
 // Don't use urlencoded middleware for multipart form data
 // app.use(express.urlencoded({ extended: true }));
 
-// Connect to MongoDB
+// Connect to MongoDB.
+// Fail fast on boot: without a database this process can only serve 500s, and a
+// container that dies is a deploy that rolls back instead of one that silently
+// looks healthy. Drops *after* boot are handled by the lifecycle logging below
+// plus the health check, which reports 503 so Docker restarts us.
 mongoose.set("strictQuery", false);
-mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("MongoDB Connected Successfully"))
-  .catch((err) => console.error("MongoDB Connection Error:", err));
 
-// Check for MongoDB connection errors
-mongoose.connection.on("error", (err) => {
-  console.error("MongoDB connection error:", err);
-});
+if (!process.env.MONGO_URI) {
+  console.error("FATAL: MONGO_URI is not set — refusing to start.");
+  process.exit(1);
+}
+
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected Successfully"))
+  .catch((err) => {
+    console.error("FATAL: initial MongoDB connection failed:", err.message);
+    process.exit(1);
+  });
+
+// Connection lifecycle — timestamped so a post-mortem shows *when* the link died,
+// not just the buffering timeouts that follow it.
+const mongoEvent = (msg) => console.log(`[mongo] ${new Date().toISOString()} ${msg}`);
+mongoose.connection.on("disconnected", () => mongoEvent("disconnected"));
+mongoose.connection.on("reconnected", () => mongoEvent("reconnected"));
+mongoose.connection.on("close", () => mongoEvent("connection closed"));
+mongoose.connection.on("error", (err) =>
+  console.error(`[mongo] ${new Date().toISOString()} error:`, err.message)
+);
 
 // Routes
 app.use("/api/destinations", destinationRoutes);

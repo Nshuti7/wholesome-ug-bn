@@ -30,6 +30,8 @@ const weatherRoutes = require("./routes/weather");
 const healthRoutes = require("./routes/health");
 const companyRoutes = require("./routes/company");
 const showcaseRoutes = require("./routes/showcase");
+const flightRoutes = require("./routes/flights");
+const { startScheduledRefresh } = require("./services/flightPricingService");
 
 app.set("trust proxy", 1);
 applySecurity(app);
@@ -128,6 +130,12 @@ app.use("/api/weather", weatherRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/company", companyRoutes);
 app.use("/api/showcase", showcaseRoutes);
+app.use("/api/flights", flightRoutes);
+
+// Indicative-fare sampling. No-op unless FLIGHT_PRICING_REFRESH_ENABLED=true
+// and Amadeus credentials are set, so dev and preview deployments stay off the
+// quota and simply serve the hand-maintained guide.
+startScheduledRefresh();
 
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the Ubuntu Footprints API" });

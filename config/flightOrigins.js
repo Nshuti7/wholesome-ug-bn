@@ -127,6 +127,27 @@ const ORIGINS = [
   },
 ];
 
+// IATA *city* codes, used when querying fare providers.
+//
+// This is not pedantry — it is measured. Travelpayouts' cached fare data is far
+// thinner on single-airport codes than on city codes: London->Entebbe returns
+// nothing for LHR on some endpoints and returns fares for LON, and where both
+// answer, the city code finds the lower fare ($699 vs $738) because it spans
+// every airport in the city. We display the airport (travellers recognise
+// "London Heathrow") but we ask using the city.
+//
+// Only cities with more than one commercial airport differ from `airport`.
+const SEARCH_CODES = {
+  LHR: "LON",
+  JFK: "NYC",
+  YYZ: "YTO",
+};
+
+/** The code to send to a fare provider for this origin. */
+function searchCode(origin) {
+  return SEARCH_CODES[origin.airport] || origin.airport;
+}
+
 const byCountry = new Map(ORIGINS.map((o) => [o.country, o]));
 const byAirport = new Map(ORIGINS.map((o) => [o.airport, o]));
 
@@ -161,6 +182,7 @@ module.exports = {
   VERIFIED_ON,
   GUIDE_STALE_AFTER_DAYS,
   resolveOrigin,
+  searchCode,
   isPeakMonth,
   baselineFare,
   guideIsStale,

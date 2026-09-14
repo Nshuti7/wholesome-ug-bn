@@ -137,11 +137,87 @@ async function sample(args) {
   }
 }
 
+// Ignore a cached fare older than this. These are prices real users found, and a
+// three-month-old fare is a fiction we would be republishing as current.
+const MAX_FARE_AGE_DAYS = 45;
+
+/**
+ * Every fare this origin has, bucketed by departure month.
+ *
+ * This is the method that makes the feature viable, and it is worth saying why.
+ *
+ * The month-scoped endpoints have almost no data for our routes — measured
+ * across our eleven markets, one returned a fare. This endpoint, asked for a
+ * whole year, answers for eight of the eleven. Each row carries its own
+ * depart_date, so we bucket by month ourselves and get month-level floors out of
+ * a single call per origin rather than one call per origin per month. Six times
+ * fewer requests AND better coverage.
+ *
+ * Months the data does not cover simply do not appear in the result, and the
+ * caller leaves its existing value (or the hand-maintained baseline) in place.
+ *
+ * Returns { "2026-12": { amount, currency, carrier, departDate, foundAt }, ... }
+ */
+async function sampleYear({ originAirport, destinationCode }) {
+  const res = await axios.get(`${BASE_URL}/v2/prices/latest`, {
+    timeout: REQUEST_TIMEOUT_MS,
+    params: {
+      origin: originAirport,
+      destination: destinationCode,
+      period_type: "year",
+      currency: "usd",
+      one_way: false,
+      limit: 1000,
+      token: process.env.TRAVELPAYOUTS_TOKEN,
+    },
+  });
+
+  assertAccepted(res.data, "v2/prices/latest");
+
+  const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+  const cutoff = Date.now() - MAX_FARE_AGE_DAYS * 86400000;
+  const byMonth = {};
+
+  for (const row of rows) {
+    const amount = Number(row?.value ?? row?.price);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+
+    // `actual: false` means the provider no longer believes this fare is live.
+    if (row.actual === false) continue;
+
+    const foundAt = Date.parse(row.found_at);
+    if (Number.isFinite(foundAt) && foundAt < cutoff) continue;
+
+    const month = String(row.depart_date || "").slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(month)) continue;
+
+    if (!byMonth[month] || amount < byMonth[month].amount) {
+      byMonth[month] = {
+        amount,
+        currency: String(res.data?.currency || "USD").toUpperCase(),
+        // This endpoint has no airline field. `gate` is the booking agency that
+        // found the fare — "Gotogate", "Turna.com", "City.Travel" — NOT an
+        // airline. Putting it in `carrier` would eventually see a site somewhere
+        // render "flying with Gotogate", which is false. It goes in `agency`, and
+        // `carrier` stays null because we genuinely do not know the airline.
+        carrier: null,
+        agency: row.gate || null,
+        departDate: row.depart_date || null,
+        foundAt: row.found_at || null,
+      };
+    }
+  }
+
+  return byMonth;
+}
+
 module.exports = {
   id: "travelpayouts",
   label: "Travelpayouts (Aviasales)",
   isConfigured,
   sample,
+  // Preferred by the refresh job: one call per origin, all months at once.
+  sampleYear,
   pickCheapest,
   // Exported for diagnostics: probe one surface at a time when `sample` reports
   // that both failed.

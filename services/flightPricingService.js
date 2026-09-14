@@ -26,6 +26,7 @@ const {
   ORIGINS,
   DESTINATION,
   resolveOrigin,
+  searchCode,
   isPeakMonth,
   baselineFare,
   guideIsStale,
@@ -108,7 +109,7 @@ async function sampleFare(origin, month) {
   const iso = (d) => d.toISOString().slice(0, 10);
 
   const fare = await provider.sample({
-    originAirport: origin.airport,
+    originAirport: searchCode(origin),
     destinationCode: DESTINATION.code,
     month,
     returnMonth: monthKey(ret),
@@ -173,6 +174,9 @@ async function getEstimate(originInput, monthInput) {
           ...base,
           amount: parsed.amount,
           carrier: parsed.carrier || null,
+          agency: parsed.agency || null,
+          departDate: parsed.departDate || null,
+          foundAt: parsed.foundAt || null,
           source: parsed.provider || "provider",
           sampledAt: parsed.sampledAt || null,
           stale: false,
@@ -188,6 +192,9 @@ async function getEstimate(originInput, monthInput) {
     ...base,
     amount: baselineFare(origin, monthNumber),
     carrier: null,
+    agency: null,
+    departDate: null,
+    foundAt: null,
     source: "guide",
     sampledAt: VERIFIED_ON,
     stale: guideIsStale(),
@@ -227,6 +234,88 @@ async function getGuideMatrix() {
  * night to finish. A failure on one route leaves that route's previous cache
  * entry (or the guide) in place rather than blanking it.
  */
+/** Write one sampled fare into the cache. */
+async function cacheFare(origin, month, fare) {
+  await redisClient.set(
+    cacheKey(origin.airport, month),
+    JSON.stringify({ ...fare, sampledAt: new Date().toISOString() }),
+    FARE_TTL_SECONDS
+  );
+}
+
+/**
+ * Refresh one origin using a provider that can return a whole year at once.
+ * One request covers every month, so this is both cheaper and better covered
+ * than asking month by month — see travelpayouts.sampleYear for the measurements.
+ */
+async function refreshOriginByYear(provider, origin, months, result) {
+  const byMonth = await provider.sampleYear({
+    originAirport: searchCode(origin),
+    destinationCode: DESTINATION.code,
+  });
+
+  let wrote = 0;
+
+  for (const month of months) {
+    const fare = byMonth[month];
+    if (!fare) continue;
+
+    const currency = String(fare.currency || "USD").toUpperCase();
+    if (currency !== "USD") {
+      throw new Error(`${provider.id} returned ${currency} for ${month}, expected USD`);
+    }
+
+    await cacheFare(origin, month, {
+      amount: roundUpTo10(fare.amount),
+      currency: "USD",
+      carrier: fare.carrier || null,
+      agency: fare.agency || null,
+      provider: provider.id,
+      departDate: fare.departDate || null,
+      foundAt: fare.foundAt || null,
+    });
+    wrote += 1;
+  }
+
+  result.updated += wrote;
+  // Months this origin had no data for keep whatever they had — a previous
+  // sample, or the hand-maintained baseline. Never blanked.
+  result.noOffers += months.length - wrote;
+  return wrote;
+}
+
+/** Refresh one origin one month at a time, for providers that price single dates. */
+async function refreshOriginByMonth(provider, origin, months, result) {
+  for (const month of months) {
+    try {
+      const fare = await sampleFare(origin, month);
+      if (!fare) {
+        result.noOffers += 1;
+      } else {
+        await cacheFare(origin, month, fare);
+        result.updated += 1;
+      }
+    } catch (err) {
+      result.failed += 1;
+      if (result.errors.length < 5) {
+        result.errors.push(`${origin.airport}/${month}: ${err.message}`);
+      }
+    }
+    // Pace requests so a full refresh cannot trip the provider's rate limit.
+    await new Promise((r) => setTimeout(r, 250));
+  }
+}
+
+/**
+ * Sample every origin and cache what comes back.
+ *
+ * Prefers a provider's whole-year method when it has one: one request per origin
+ * instead of one per origin per month, with better coverage. Falls back to
+ * month-by-month for providers that only price specific dates.
+ *
+ * A failure on one origin leaves that origin's previous cache entries (or the
+ * baseline) in place rather than blanking them.
+ */
 async function refreshAll({ reason = "manual" } = {}) {
   const provider = getProvider();
   if (!provider) {
@@ -235,9 +324,11 @@ async function refreshAll({ reason = "manual" } = {}) {
 
   const months = upcomingMonths();
   const started = Date.now();
+  const byYear = typeof provider.sampleYear === "function";
   const result = {
     reason,
     provider: provider.id,
+    strategy: byYear ? "year-per-origin" : "month-by-month",
     attempted: 0,
     updated: 0,
     noOffers: 0,
@@ -246,38 +337,28 @@ async function refreshAll({ reason = "manual" } = {}) {
   };
 
   for (const origin of ORIGINS) {
-    for (const month of months) {
-      result.attempted += 1;
+    result.attempted += months.length;
+
+    if (byYear) {
       try {
-        const fare = await sampleFare(origin, month);
-        if (!fare) {
-          result.noOffers += 1;
-        } else {
-          await redisClient.set(
-            cacheKey(origin.airport, month),
-            JSON.stringify({ ...fare, sampledAt: new Date().toISOString() }),
-            FARE_TTL_SECONDS
-          );
-          result.updated += 1;
-        }
+        await refreshOriginByYear(provider, origin, months, result);
       } catch (err) {
-        result.failed += 1;
-        // Keep only the first few messages; a bad credential would otherwise
-        // produce one line per route.
+        result.failed += months.length;
         if (result.errors.length < 5) {
-          result.errors.push(`${origin.airport}/${month}: ${err.message}`);
+          result.errors.push(`${origin.airport}: ${err.message}`);
         }
       }
-      // Pace requests so a full refresh cannot trip the provider's rate limit.
       await new Promise((r) => setTimeout(r, 250));
+    } else {
+      await refreshOriginByMonth(provider, origin, months, result);
     }
   }
 
   result.ok = result.failed < result.attempted;
   result.durationMs = Date.now() - started;
   console.log(
-    `[flights] refresh (${reason}, ${provider.id}): ${result.updated} updated, ` +
-      `${result.noOffers} no-offer, ` +
+    `[flights] refresh (${reason}, ${provider.id}, ${result.strategy}): ` +
+      `${result.updated} updated, ${result.noOffers} no-data, ` +
       `${result.failed} failed in ${Math.round(result.durationMs / 1000)}s`
   );
   return result;

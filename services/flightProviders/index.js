@@ -4,9 +4,10 @@
 // whichever is actually configured, preferring Travelpayouts: its token is
 // self-serve, its data is free, and it prices a whole month in one call.
 //
-// When none is configured this resolves to null and the service serves the
-// hand-maintained guide in config/flightOrigins.js. That is a supported state,
-// not a broken one — the site always has a number to show.
+// When none is configured this resolves to null. That is a supported state, not
+// a broken one: the service then has no live fares, falls back to regional
+// medians while any remain cached, and otherwise shows no number at all rather
+// than inventing one.
 
 const travelpayouts = require("./travelpayouts");
 const amadeus = require("./amadeus");
@@ -23,12 +24,12 @@ function getProvider() {
     if (!match) {
       console.warn(
         `[flights] FLIGHT_PRICING_PROVIDER="${requested}" is not a known provider ` +
-          `(${PROVIDERS.map((p) => p.id).join(", ")}) — serving the guide instead`
+          `(${PROVIDERS.map((p) => p.id).join(", ")}) — no fares will be sampled`
       );
       return null;
     }
     if (!match.isConfigured()) {
-      console.warn(`[flights] ${match.label} selected but its credentials are unset — serving the guide`);
+      console.warn(`[flights] ${match.label} selected but its credentials are unset — no fares will be sampled`);
       return null;
     }
     return match;

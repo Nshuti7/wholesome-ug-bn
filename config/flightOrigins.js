@@ -1,26 +1,32 @@
-// Indicative international airfare — origin markets and hand-maintained baselines.
+// Indicative international airfare — the departure markets we answer for.
 //
-// This table is the source of truth for TWO things:
-//   1. Which routes the nightly Amadeus refresh samples (services/flightPricingService).
-//   2. The fallback shown when Amadeus is unconfigured, down, or has no cached
-//      price yet. The site must never show a blank where a price was promised,
-//      so the guide below always answers.
+// HOW THIS LIST WAS BUILT
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// ⚠️  THE `low`/`high` NUMBERS BELOW ARE UNVERIFIED PLACEHOLDERS.
-//     They were not sourced from live fares. Before this feature is shown to
-//     customers, someone must check real return fares to Entebbe for each
-//     market and update both the numbers and `verifiedOn`.
-//     The API reports `stale: true` once `verifiedOn` is older than
-//     GUIDE_STALE_AFTER_DAYS, so a forgotten table surfaces itself.
-// ─────────────────────────────────────────────────────────────────────────────
+// Not from guesswork. Every candidate market was queried against the live fare
+// provider and kept or dropped on whether real fares came back. Two things that
+// exercise taught us, both baked into the shape below:
 //
-// `low`  = typical cheapest return economy fare, off-peak, USD, 1 adult.
-// `high` = typical cheapest return economy fare in peak months, USD.
+//   1. Which CITY you ask about matters enormously. "NYC" returns nothing for
+//      Entebbe while Atlanta, Boston and Los Angeles all return fares, so a
+//      country is a LIST of search cities and we take the cheapest across them.
+//      Ask for one city and you conclude, wrongly, that a market has no flights.
 //
-// Peak for Entebbe is the northern-hemisphere holiday and dry-season overlap:
-// December–January and June–August. Gorilla-trekking demand tracks the same
-// months, which is exactly when a wrong estimate hurts most.
+//   2. Coverage is patchy and always will be — these are fares real people
+//      searched for, not a schedule. Paris had five months of data, Madrid one,
+//      Rome none. So a market having no data this week is normal, not an error.
+//
+// WHY THERE ARE NO HAND-WRITTEN PRICES HERE ANY MORE
+//
+// There used to be a `low`/`high` fare on every market, written by hand. They
+// were wrong — measured against live fares they were out by up to 61%, and worse,
+// they were wrong in a way that looked authoritative: a made-up December figure
+// sat next to a real November one and read as seasonal insight.
+//
+// So the fallback is no longer a guess. When a market has no live fare for a
+// month, we fall back to the median of live fares from its REGION that month
+// (see flightPricingService). Every number the site shows now traces back to a
+// fare somebody actually found. Where even the region is silent, we show no
+// number and say we will confirm it — which is honest, and costs us nothing.
 
 const PEAK_MONTHS = [12, 1, 6, 7, 8];
 
@@ -30,128 +36,161 @@ const DESTINATION = {
   country: "Uganda",
 };
 
-// Date the baselines below were last checked against real fares (YYYY-MM-DD).
-const VERIFIED_ON = "2026-09-15";
-
-// After this many days the guide is reported as stale to the caller.
-const GUIDE_STALE_AFTER_DAYS = 120;
-
-const ORIGINS = [
-  {
-    country: "GB",
-    countryName: "United Kingdom",
-    airport: "LHR",
-    city: "London",
-    low: 850,
-    high: 1500,
-  },
-  {
-    country: "US",
-    countryName: "United States",
-    airport: "JFK",
-    city: "New York",
-    low: 1100,
-    high: 1900,
-  },
-  {
-    country: "DE",
-    countryName: "Germany",
-    airport: "FRA",
-    city: "Frankfurt",
-    low: 800,
-    high: 1400,
-  },
-  {
-    country: "NL",
-    countryName: "Netherlands",
-    airport: "AMS",
-    city: "Amsterdam",
-    low: 800,
-    high: 1400,
-  },
-  {
-    country: "BE",
-    countryName: "Belgium",
-    airport: "BRU",
-    city: "Brussels",
-    low: 780,
-    high: 1350,
-  },
-  {
-    country: "CA",
-    countryName: "Canada",
-    airport: "YYZ",
-    city: "Toronto",
-    low: 1200,
-    high: 2000,
-  },
-  {
-    country: "AE",
-    countryName: "United Arab Emirates",
-    airport: "DXB",
-    city: "Dubai",
-    low: 550,
-    high: 900,
-  },
-  {
-    country: "AU",
-    countryName: "Australia",
-    airport: "SYD",
-    city: "Sydney",
-    low: 1500,
-    high: 2400,
-  },
-  {
-    country: "ZA",
-    countryName: "South Africa",
-    airport: "JNB",
-    city: "Johannesburg",
-    low: 450,
-    high: 750,
-  },
-  {
-    country: "KE",
-    countryName: "Kenya",
-    airport: "NBO",
-    city: "Nairobi",
-    low: 200,
-    high: 350,
-  },
-  {
-    country: "RW",
-    countryName: "Rwanda",
-    airport: "KGL",
-    city: "Kigali",
-    low: 180,
-    high: 320,
-  },
-];
-
-// IATA *city* codes, used when querying fare providers.
+// Regions exist so a market with no data can borrow from its neighbours.
 //
-// This is not pedantry — it is measured. Travelpayouts' cached fare data is far
-// thinner on single-airport codes than on city codes: London->Entebbe returns
-// nothing for LHR on some endpoints and returns fares for LON, and where both
-// answer, the city code finds the lower fare ($699 vs $738) because it spans
-// every airport in the city. We display the airport (travellers recognise
-// "London Heathrow") but we ask using the city.
+// These are deliberately COARSE, and that is a correction. Europe was first split
+// four ways — western, northern, southern, central — which looked tidy and left
+// Spain, Italy, Portugal, Greece and Malta with no number at all, because a
+// median needs at least two markets reporting and southern Europe had none in
+// the published window. Fare data is too sparse to support fine buckets.
 //
-// Only cities with more than one commercial airport differ from `airport`.
-const SEARCH_CODES = {
-  LHR: "LON",
-  JFK: "NYC",
-  YYZ: "YTO",
+// One Europe is also closer to the truth for this destination: nearly every
+// European route to Entebbe connects through the same handful of hubs (Istanbul,
+// Dubai, Doha, Addis, Amsterdam), so the fares cluster regardless of which
+// European city you start from. Measured range across live European fares was
+// roughly $610-890 — one band, not four.
+const REGIONS = {
+  EUROPE: "Europe",
+  NORTH_AMERICA: "North America",
+  MIDDLE_EAST: "Middle East",
+  AFRICA: "Africa",
+  ASIA: "Asia",
+  OCEANIA: "Oceania",
+  SOUTH_AMERICA: "South America",
 };
 
-/** The code to send to a fare provider for this origin. */
-function searchCode(origin) {
-  return SEARCH_CODES[origin.airport] || origin.airport;
-}
+// `airport` is what we SHOW (travellers recognise their own airport).
+// `searchCodes` is what we ASK — IATA city codes, cheapest wins.
+// `verified` records whether live fares were seen for this market when the list
+// was last compiled, so a market that has never returned anything is visible
+// rather than quietly padding the dropdown.
+const ORIGINS = [
+  /* ── Europe: western ────────────────────────────────────── */
+  { country: "GB", countryName: "United Kingdom", city: "London", airport: "LHR",
+    searchCodes: ["LON", "MAN", "EDI"], region: REGIONS.EUROPE, verified: true },
+  { country: "FR", countryName: "France", city: "Paris", airport: "CDG",
+    searchCodes: ["PAR", "NCE", "LYS"], region: REGIONS.EUROPE, verified: true },
+  { country: "DE", countryName: "Germany", city: "Frankfurt", airport: "FRA",
+    searchCodes: ["FRA", "MUC", "BER", "DUS", "HAM"], region: REGIONS.EUROPE, verified: true },
+  { country: "NL", countryName: "Netherlands", city: "Amsterdam", airport: "AMS",
+    searchCodes: ["AMS"], region: REGIONS.EUROPE, verified: true },
+  { country: "BE", countryName: "Belgium", city: "Brussels", airport: "BRU",
+    searchCodes: ["BRU", "ANR"], region: REGIONS.EUROPE, verified: false },
+  { country: "CH", countryName: "Switzerland", city: "Zurich", airport: "ZRH",
+    searchCodes: ["ZRH", "GVA", "BSL"], region: REGIONS.EUROPE, verified: true },
+  { country: "AT", countryName: "Austria", city: "Vienna", airport: "VIE",
+    searchCodes: ["VIE", "SZG"], region: REGIONS.EUROPE, verified: false },
+  { country: "IE", countryName: "Ireland", city: "Dublin", airport: "DUB",
+    searchCodes: ["DUB", "ORK"], region: REGIONS.EUROPE, verified: false },
+  { country: "LU", countryName: "Luxembourg", city: "Luxembourg", airport: "LUX",
+    searchCodes: ["LUX"], region: REGIONS.EUROPE, verified: false },
+
+  /* ── Europe: nordic ─────────────────────────────────────── */
+  { country: "SE", countryName: "Sweden", city: "Stockholm", airport: "ARN",
+    searchCodes: ["STO", "GOT"], region: REGIONS.EUROPE, verified: true },
+  { country: "DK", countryName: "Denmark", city: "Copenhagen", airport: "CPH",
+    searchCodes: ["CPH", "BLL"], region: REGIONS.EUROPE, verified: true },
+  { country: "NO", countryName: "Norway", city: "Oslo", airport: "OSL",
+    searchCodes: ["OSL", "BGO"], region: REGIONS.EUROPE, verified: false },
+  { country: "FI", countryName: "Finland", city: "Helsinki", airport: "HEL",
+    searchCodes: ["HEL"], region: REGIONS.EUROPE, verified: false },
+  { country: "IS", countryName: "Iceland", city: "Reykjavik", airport: "KEF",
+    searchCodes: ["REK"], region: REGIONS.EUROPE, verified: false },
+
+  /* ── Europe: southern ───────────────────────────────────── */
+  { country: "ES", countryName: "Spain", city: "Madrid", airport: "MAD",
+    searchCodes: ["MAD", "BCN", "AGP", "PMI"], region: REGIONS.EUROPE, verified: true },
+  { country: "IT", countryName: "Italy", city: "Rome", airport: "FCO",
+    searchCodes: ["ROM", "MIL", "VCE", "NAP"], region: REGIONS.EUROPE, verified: false },
+  { country: "PT", countryName: "Portugal", city: "Lisbon", airport: "LIS",
+    searchCodes: ["LIS", "OPO"], region: REGIONS.EUROPE, verified: false },
+  { country: "GR", countryName: "Greece", city: "Athens", airport: "ATH",
+    searchCodes: ["ATH", "SKG"], region: REGIONS.EUROPE, verified: false },
+  { country: "MT", countryName: "Malta", city: "Valletta", airport: "MLA",
+    searchCodes: ["MLA"], region: REGIONS.EUROPE, verified: false },
+
+  /* ── Europe: central & eastern ──────────────────────────── */
+  { country: "PL", countryName: "Poland", city: "Warsaw", airport: "WAW",
+    searchCodes: ["WAW", "KRK"], region: REGIONS.EUROPE, verified: true },
+  { country: "CZ", countryName: "Czechia", city: "Prague", airport: "PRG",
+    searchCodes: ["PRG"], region: REGIONS.EUROPE, verified: false },
+  { country: "HU", countryName: "Hungary", city: "Budapest", airport: "BUD",
+    searchCodes: ["BUD"], region: REGIONS.EUROPE, verified: false },
+  { country: "RO", countryName: "Romania", city: "Bucharest", airport: "OTP",
+    searchCodes: ["BUH"], region: REGIONS.EUROPE, verified: false },
+  { country: "TR", countryName: "Turkey", city: "Istanbul", airport: "IST",
+    searchCodes: ["IST", "AYT"], region: REGIONS.EUROPE, verified: true },
+
+  /* ── North America ──────────────────────────────────────── */
+  // NYC returns nothing for Entebbe; Atlanta, Boston and LA return fares. This
+  // is exactly why a country is a list of cities.
+  { country: "US", countryName: "United States", city: "New York", airport: "JFK",
+    searchCodes: ["NYC", "ATL", "BOS", "LAX", "CHI", "WAS", "MIA", "SFO", "IAD", "DFW"],
+    region: REGIONS.NORTH_AMERICA, verified: true },
+  { country: "CA", countryName: "Canada", city: "Toronto", airport: "YYZ",
+    searchCodes: ["YTO", "YUL", "YVR", "YYC"], region: REGIONS.NORTH_AMERICA, verified: true },
+
+  /* ── Middle East ────────────────────────────────────────── */
+  { country: "AE", countryName: "United Arab Emirates", city: "Dubai", airport: "DXB",
+    searchCodes: ["DXB", "AUH", "SHJ"], region: REGIONS.MIDDLE_EAST, verified: true },
+  { country: "QA", countryName: "Qatar", city: "Doha", airport: "DOH",
+    searchCodes: ["DOH"], region: REGIONS.MIDDLE_EAST, verified: true },
+  { country: "SA", countryName: "Saudi Arabia", city: "Riyadh", airport: "RUH",
+    searchCodes: ["RUH", "JED", "DMM"], region: REGIONS.MIDDLE_EAST, verified: true },
+  { country: "IL", countryName: "Israel", city: "Tel Aviv", airport: "TLV",
+    searchCodes: ["TLV"], region: REGIONS.MIDDLE_EAST, verified: true },
+
+  /* ── Africa ─────────────────────────────────────────────── */
+  { country: "KE", countryName: "Kenya", city: "Nairobi", airport: "NBO",
+    searchCodes: ["NBO", "MBA"], region: REGIONS.AFRICA, verified: true },
+  { country: "TZ", countryName: "Tanzania", city: "Dar es Salaam", airport: "DAR",
+    searchCodes: ["DAR", "ZNZ", "JRO"], region: REGIONS.AFRICA, verified: true },
+  { country: "RW", countryName: "Rwanda", city: "Kigali", airport: "KGL",
+    searchCodes: ["KGL"], region: REGIONS.AFRICA, verified: true },
+  { country: "BI", countryName: "Burundi", city: "Bujumbura", airport: "BJM",
+    searchCodes: ["BJM"], region: REGIONS.AFRICA, verified: true },
+  { country: "ET", countryName: "Ethiopia", city: "Addis Ababa", airport: "ADD",
+    searchCodes: ["ADD"], region: REGIONS.AFRICA, verified: true },
+  { country: "ZA", countryName: "South Africa", city: "Johannesburg", airport: "JNB",
+    searchCodes: ["JNB", "CPT", "DUR"], region: REGIONS.AFRICA, verified: true },
+  { country: "NG", countryName: "Nigeria", city: "Lagos", airport: "LOS",
+    searchCodes: ["LOS", "ABV"], region: REGIONS.AFRICA, verified: true },
+  { country: "GH", countryName: "Ghana", city: "Accra", airport: "ACC",
+    searchCodes: ["ACC"], region: REGIONS.AFRICA, verified: true },
+  { country: "EG", countryName: "Egypt", city: "Cairo", airport: "CAI",
+    searchCodes: ["CAI"], region: REGIONS.AFRICA, verified: true },
+  { country: "ZM", countryName: "Zambia", city: "Lusaka", airport: "LUN",
+    searchCodes: ["LUN"], region: REGIONS.AFRICA, verified: true },
+  { country: "ZW", countryName: "Zimbabwe", city: "Harare", airport: "HRE",
+    searchCodes: ["HRE"], region: REGIONS.AFRICA, verified: true },
+
+  /* ── Asia ───────────────────────────────────────────────── */
+  { country: "IN", countryName: "India", city: "Delhi", airport: "DEL",
+    searchCodes: ["DEL", "BOM", "BLR"], region: REGIONS.ASIA, verified: false },
+  { country: "CN", countryName: "China", city: "Beijing", airport: "PEK",
+    searchCodes: ["BJS", "PEK", "SHA", "CAN"], region: REGIONS.ASIA, verified: true },
+  { country: "SG", countryName: "Singapore", city: "Singapore", airport: "SIN",
+    searchCodes: ["SIN"], region: REGIONS.ASIA, verified: false },
+  { country: "TH", countryName: "Thailand", city: "Bangkok", airport: "BKK",
+    searchCodes: ["BKK"], region: REGIONS.ASIA, verified: true },
+  { country: "JP", countryName: "Japan", city: "Tokyo", airport: "NRT",
+    searchCodes: ["TYO"], region: REGIONS.ASIA, verified: false },
+
+  /* ── Oceania ────────────────────────────────────────────── */
+  { country: "AU", countryName: "Australia", city: "Sydney", airport: "SYD",
+    searchCodes: ["SYD", "MEL", "BNE", "PER"], region: REGIONS.OCEANIA, verified: false },
+  { country: "NZ", countryName: "New Zealand", city: "Auckland", airport: "AKL",
+    searchCodes: ["AKL"], region: REGIONS.OCEANIA, verified: false },
+
+  /* ── South America ──────────────────────────────────────── */
+  { country: "BR", countryName: "Brazil", city: "Sao Paulo", airport: "GRU",
+    searchCodes: ["SAO", "RIO"], region: REGIONS.SOUTH_AMERICA, verified: true },
+];
 
 const byCountry = new Map(ORIGINS.map((o) => [o.country, o]));
 const byAirport = new Map(ORIGINS.map((o) => [o.airport, o]));
 
-/** Resolve an origin from either an ISO country code ("GB") or an IATA code ("LHR"). */
+/** Resolve an origin from an ISO country code ("GB") or its display airport ("LHR"). */
 function resolveOrigin(input) {
   if (!input) return null;
   const key = String(input).trim().toUpperCase();
@@ -163,27 +202,17 @@ function isPeakMonth(month) {
   return PEAK_MONTHS.includes(Number(month));
 }
 
-/** The hand-maintained fallback fare for an origin in a given month. */
-function baselineFare(origin, month) {
-  return isPeakMonth(month) ? origin.high : origin.low;
-}
-
-function guideIsStale() {
-  const verified = Date.parse(`${VERIFIED_ON}T00:00:00Z`);
-  if (Number.isNaN(verified)) return true;
-  const ageDays = (Date.now() - verified) / 86400000;
-  return ageDays > GUIDE_STALE_AFTER_DAYS;
+/** Every distinct region name in the list. */
+function allRegions() {
+  return [...new Set(ORIGINS.map((o) => o.region))];
 }
 
 module.exports = {
   ORIGINS,
   DESTINATION,
+  REGIONS,
   PEAK_MONTHS,
-  VERIFIED_ON,
-  GUIDE_STALE_AFTER_DAYS,
   resolveOrigin,
-  searchCode,
   isPeakMonth,
-  baselineFare,
-  guideIsStale,
+  allRegions,
 };

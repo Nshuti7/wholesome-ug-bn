@@ -3,13 +3,24 @@ const router = express.Router();
 const { protect, admin } = require("../middleware/auth");
 const { strictLimiter } = require("../middleware/rateLimiter");
 const flightPricing = require("../services/flightPricingService");
-const { ORIGINS, DESTINATION, VERIFIED_ON } = require("../config/flightOrigins");
+const { ORIGINS, DESTINATION } = require("../config/flightOrigins");
 
 // Every estimate ships with the sentence that makes it honest. It lives here,
 // not in the frontend, so no caller can render the number without it.
 const DISCLAIMER =
   "Indicative only. Airfare is not included in our package prices and the final " +
   "fare depends on your departure city, travel dates and availability.";
+
+// The origin list as the website needs it. Regions travel with it so the UI can
+// group the dropdown the way the data is actually organised.
+const originList = () =>
+  ORIGINS.map((o) => ({
+    country: o.country,
+    countryName: o.countryName,
+    airport: o.airport,
+    city: o.city,
+    region: o.region,
+  }));
 
 function withDisclaimer(payload) {
   return { ...payload, disclaimer: DISCLAIMER };
@@ -31,13 +42,7 @@ router.get("/origins", (req, res) => {
     success: true,
     data: {
       destination: DESTINATION,
-      guideVerifiedOn: VERIFIED_ON,
-      origins: ORIGINS.map((o) => ({
-        country: o.country,
-        countryName: o.countryName,
-        airport: o.airport,
-        city: o.city,
-      })),
+      origins: originList(),
     },
   });
 });
@@ -48,9 +53,11 @@ router.get("/origins", (req, res) => {
  *   get:
  *     summary: Indicative return airfare to Entebbe from one origin
  *     description: >
- *       Served from cache only — this endpoint never calls Amadeus, so it stays
- *       fast and cannot exhaust the API quota. When no sampled fare is cached it
- *       falls back to the hand-maintained guide, and `source` says which was used.
+ *       Served from cache only — this endpoint never calls the fare provider, so
+ *       it stays fast and cannot exhaust the API quota. `basis` says where the
+ *       number came from: "live" (a real fare for this market and month),
+ *       "region" (the median of live fares from this market's region), or "none"
+ *       (no number at all, in which case `amount` is null).
  *     tags: [Flights]
  *     parameters:
  *       - in: query
@@ -156,14 +163,8 @@ router.get("/guide", async (req, res) => {
       success: true,
       data: withDisclaimer({
         destination: DESTINATION,
-        guideVerifiedOn: VERIFIED_ON,
         months,
-        origins: ORIGINS.map((o) => ({
-          country: o.country,
-          countryName: o.countryName,
-          airport: o.airport,
-          city: o.city,
-        })),
+        origins: originList(),
         rows,
       }),
     });
@@ -211,6 +212,32 @@ router.get("/diagnostics", strictLimiter, protect, admin, async (req, res) => {
   } catch (error) {
     console.error("[flights] diagnostics error:", error.message);
     res.status(500).json({ success: false, message: "Diagnostics failed" });
+  }
+});
+
+/**
+ * @swagger
+ * /flights/coverage:
+ *   get:
+ *     summary: Which markets have live fares, which lean on their region (admin)
+ *     description: >
+ *       The honest answer to "is this working?". Per market: how many of the
+ *       published months have a live fare, how many fall back to the regional
+ *       median, and how many have nothing at all.
+ *     tags: [Flights]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Coverage report
+ */
+router.get("/coverage", protect, admin, async (req, res) => {
+  try {
+    const data = await flightPricing.getCoverage();
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error("[flights] coverage error:", error.message);
+    res.status(500).json({ success: false, message: "Failed to build coverage report" });
   }
 });
 

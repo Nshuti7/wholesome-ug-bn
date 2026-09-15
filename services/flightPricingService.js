@@ -401,6 +401,43 @@ async function refreshOriginByYear(provider, origin, months, result) {
     wrote += 1;
   }
 
+  // Keep the cheapest fare across EVERY month the provider returned, including
+  // months beyond the six we publish.
+  //
+  // Measured reason: Madrid's only fare to Entebbe was for a departure ten months
+  // out, and Sao Paulo's only fare was likewise outside the window. Both were
+  // being discarded, so Spain fell back to a Europe-wide median and Brazil showed
+  // nothing at all — while we held a real fare from each city. The nearby-month
+  // tier already states which month a fare was for, so a distant one is honest;
+  // a generic regional figure in its place is less informative, not more.
+  //
+  // Capped at a year out: past that the fare says more about how far ahead the
+  // airline has loaded its schedule than about what the trip costs.
+  const horizon = monthKey(new Date(Date.now() + 365 * 86400000));
+  let best = null;
+  for (const [month, fare] of Object.entries(merged)) {
+    if (month > horizon) continue;
+    if (!best || fare.amount < best.amount) best = { ...fare, month };
+  }
+  if (best) {
+    await redisClient.set(
+      bestKey(origin.country),
+      JSON.stringify({
+        amount: roundUpTo10(best.amount),
+        currency: "USD",
+        carrier: best.carrier || null,
+        agency: best.agency || null,
+        provider: provider.id,
+        departDate: best.departDate || null,
+        foundAt: best.foundAt || null,
+        month: best.month,
+        sampledAt: new Date().toISOString(),
+      }),
+      FARE_TTL_SECONDS
+    );
+    result.marketBests += 1;
+  }
+
   result.updated += wrote;
   // Months with no data keep whatever they had, or fall through to the region.
   result.noData += months.length - wrote;
@@ -429,8 +466,11 @@ async function refreshOriginByMonth(provider, origin, months, result) {
 }
 
 /**
- * For each market, record its cheapest live fare across the whole window and the
- * month that fare was for.
+ * For each market, record its cheapest live fare across the window and the month
+ * it was for.
+ *
+ * Only used for providers that price single dates. The whole-year path writes a
+ * better value itself, because it can see fares beyond the months we publish.
  *
  * Precomputed rather than worked out on read: getEstimate is called 49 markets x
  * 6 months to build the guide, and scanning every market's months on each of
@@ -555,7 +595,7 @@ async function refreshAll({ reason = "manual" } = {}) {
     }
   }
 
-  await buildMarketBests(months, result);
+  if (!byYear) await buildMarketBests(months, result);
   await buildRegionMedians(provider, months, result);
 
   result.marketsWithData = await countMarketsWithData(months);

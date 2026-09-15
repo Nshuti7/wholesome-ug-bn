@@ -18,11 +18,15 @@
 //
 // THREE TIERS, AND NO INVENTED NUMBERS
 //
-//   1. live   — a fare the provider actually found for this market and month.
-//   2. region — the median of live fares from this market's region that month,
-//               used when a market has no fare of its own. Every input is a real
-//               fare; only the attribution is approximate, and we say so.
-//   3. none   — we have nothing, so we show no number and offer to confirm it.
+//   1. live   — a fare the provider found for this market and this month.
+//   2. market — this market's own cheapest fare from a NEARBY month, labelled
+//               with the month it was for. Coverage is monthly and patchy: we
+//               often hold four real Paris fares and none for the month being
+//               viewed. Skipping straight to the region there threw away the
+//               best information we had and made every European country show
+//               one identical figure.
+//   3. region — the median of live fares from this market's region that month.
+//   4. none   — we have nothing, so we show no number and offer to confirm it.
 //
 // There is deliberately no hand-written price table any more. The one we had was
 // out by up to 61% against live fares, and wrong in the worst way: an invented
@@ -48,6 +52,7 @@ const {
 const CACHE_VERSION = "v2";
 const CACHE_PREFIX = `flight:est:${CACHE_VERSION}`;
 const REGION_PREFIX = `flight:region:${CACHE_VERSION}`;
+const BEST_PREFIX = `flight:best:${CACHE_VERSION}`;
 const REFRESH_LOCK_KEY = `flight:refresh:lock:${CACHE_VERSION}`;
 
 // Cache a sampled fare for 8 days; the refresh runs daily, so this survives a
@@ -93,6 +98,10 @@ function cacheKey(country, month) {
   return `${CACHE_PREFIX}:${country}:${month}`;
 }
 
+function bestKey(country) {
+  return `${BEST_PREFIX}:${country}`;
+}
+
 function regionKey(region, month) {
   return `${REGION_PREFIX}:${region.replace(/\s+/g, "-")}:${month}`;
 }
@@ -100,6 +109,17 @@ function regionKey(region, month) {
 /** Round up to the nearest $10 — see the "floor" note at the top of the file. */
 function roundUpTo10(amount) {
   return Math.ceil(Number(amount) / 10) * 10;
+}
+
+/** "2027-01" -> "January 2027", for caveats a traveller has to read. */
+function monthName(month) {
+  const parsed = parseMonthKey(month);
+  if (!parsed) return month;
+  return new Date(Date.UTC(parsed.year, parsed.month - 1, 1)).toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function median(numbers) {
@@ -188,6 +208,7 @@ const EMPTY_FARE = {
   sampledAt: null,
   basisNote: null,
   basisSampleSize: null,
+  basisMonth: null,
 };
 
 /**
@@ -228,7 +249,37 @@ async function getEstimate(originInput, monthInput) {
     }
   }
 
-  // 2. The region's median for this month, built from real fares elsewhere.
+  // 2. This market's own cheapest fare from another month in the window. More
+  // specific, and more useful, than a regional average — and it is still a fare
+  // somebody actually found, so long as we say which month it was for.
+  const best = await redisClient.get(bestKey(origin.country));
+  if (best) {
+    try {
+      const parsed = JSON.parse(best);
+      if (Number.isFinite(parsed?.amount) && parsed.month !== month) {
+        return {
+          ...base,
+          ...EMPTY_FARE,
+          amount: parsed.amount,
+          carrier: parsed.carrier || null,
+          agency: parsed.agency || null,
+          departDate: parsed.departDate || null,
+          foundAt: parsed.foundAt || null,
+          sampledAt: parsed.sampledAt || null,
+          source: parsed.provider || "provider",
+          basis: "market",
+          basisMonth: parsed.month,
+          basisNote:
+            `Cheapest we have seen from ${origin.city}, for a ${monthName(parsed.month)} ` +
+            `departure. We have no ${monthName(month)} fare yet.`,
+        };
+      }
+    } catch {
+      // Fall through to the region.
+    }
+  }
+
+  // 3. The region's median for this month, built from real fares elsewhere.
   const regional = await redisClient.get(regionKey(origin.region, month));
   if (regional) {
     try {
@@ -250,7 +301,7 @@ async function getEstimate(originInput, monthInput) {
     }
   }
 
-  // 3. Nothing. Say so; do not invent.
+  // 4. Nothing. Say so; do not invent.
   return {
     ...base,
     ...EMPTY_FARE,
@@ -378,6 +429,37 @@ async function refreshOriginByMonth(provider, origin, months, result) {
 }
 
 /**
+ * For each market, record its cheapest live fare across the whole window and the
+ * month that fare was for.
+ *
+ * Precomputed rather than worked out on read: getEstimate is called 49 markets x
+ * 6 months to build the guide, and scanning every market's months on each of
+ * those would turn one cache read into seven.
+ */
+async function buildMarketBests(months, result) {
+  for (const origin of ORIGINS) {
+    let best = null;
+
+    for (const month of months) {
+      const raw = await redisClient.get(cacheKey(origin.country, month));
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Number.isFinite(parsed?.amount)) continue;
+        if (!best || parsed.amount < best.amount) best = { ...parsed, month };
+      } catch {
+        // Ignore unreadable entries.
+      }
+    }
+
+    if (best) {
+      await redisClient.set(bestKey(origin.country), JSON.stringify(best), FARE_TTL_SECONDS);
+      result.marketBests += 1;
+    }
+  }
+}
+
+/**
  * After sampling, build each region's median fare per month from the live fares
  * just written. This is what markets with no data of their own fall back to, so
  * every number the site shows traces back to a fare somebody actually found.
@@ -461,6 +543,7 @@ async function refreshAll({ reason = "manual" } = {}) {
     noData: 0,
     failed: 0,
     regionsBuilt: 0,
+    marketBests: 0,
     errors: [],
   };
 
@@ -472,6 +555,7 @@ async function refreshAll({ reason = "manual" } = {}) {
     }
   }
 
+  await buildMarketBests(months, result);
   await buildRegionMedians(provider, months, result);
 
   result.marketsWithData = await countMarketsWithData(months);
@@ -480,7 +564,8 @@ async function refreshAll({ reason = "manual" } = {}) {
 
   console.log(
     `[flights] refresh (${reason}, ${provider.id}, ${result.strategy}): ` +
-      `${result.updated} fares, ${result.regionsBuilt} region medians, ` +
+      `${result.updated} fares, ${result.marketBests} market bests, ` +
+      `${result.regionsBuilt} region medians, ` +
       `${result.marketsWithData}/${ORIGINS.length} markets covered, ` +
       `${result.failed} failed in ${Math.round(result.durationMs / 1000)}s`
   );
@@ -501,6 +586,7 @@ async function getCoverage() {
     // object: a key called `region` there would overwrite the region NAME on the
     // row, silently turning "Western Europe" into a count.
     let liveMonths = 0;
+    let marketMonths = 0;
     let regionMonths = 0;
     let noneMonths = 0;
     let cheapest = null;
@@ -510,6 +596,8 @@ async function getCoverage() {
       if (e.basis === "live") {
         liveMonths += 1;
         if (cheapest === null || e.amount < cheapest) cheapest = e.amount;
+      } else if (e.basis === "market") {
+        marketMonths += 1;
       } else if (e.basis === "region") {
         regionMonths += 1;
       } else {
@@ -525,6 +613,7 @@ async function getCoverage() {
       searchCodes: origin.searchCodes,
       cheapestLive: cheapest,
       liveMonths,
+      marketMonths,
       regionMonths,
       noneMonths,
     });
@@ -535,7 +624,7 @@ async function getCoverage() {
     markets: ORIGINS.length,
     withLive: rows.filter((r) => r.liveMonths > 0).length,
     regionOnly: rows.filter((r) => r.liveMonths === 0 && r.regionMonths > 0).length,
-    empty: rows.filter((r) => r.liveMonths === 0 && r.regionMonths === 0).length,
+    empty: rows.filter((r) => r.noneMonths === r.liveMonths + r.marketMonths + r.regionMonths + r.noneMonths).length,
     rows: rows.sort(
       (a, b) => b.liveMonths - a.liveMonths || a.countryName.localeCompare(b.countryName)
     ),

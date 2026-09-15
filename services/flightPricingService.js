@@ -18,6 +18,10 @@
 //
 // THREE TIERS, AND NO INVENTED NUMBERS
 //
+//   0. manual — a fare the team typed in, for routes the provider cannot answer
+//               (Australia and New Zealand return nothing, and probably always
+//               will). By default these only fill gaps; one marked overrideLive
+//               beats the provider too, for a negotiated rate.
 //   1. live   — a fare the provider found for this market and this month.
 //   2. market — this market's own cheapest fare from a NEARBY month, labelled
 //               with the month it was for. Coverage is monthly and patchy: we
@@ -37,6 +41,8 @@
 // somebody is budgeting.
 
 const redisClient = require("../utils/redisClient");
+const mongoose = require("mongoose");
+const FlightFare = require("../models/FlightFare");
 const { getProvider, describeProviders } = require("./flightProviders");
 const {
   ORIGINS,
@@ -179,6 +185,83 @@ async function sampleFare(origin, month) {
   };
 }
 
+/* ── Manual overrides ─────────────────────────────────────────────────────── */
+
+// Building the guide calls getEstimate 49 markets x 6 months. Querying Mongo on
+// each of those would be ~300 round trips to read a table with a handful of rows
+// in it, so the whole set is held in memory for a short spell. The TTL is short
+// because an admin who has just saved a fare expects to see it, and writes clear
+// the cache anyway — this only guards against read storms.
+const OVERRIDE_TTL_MS = 30 * 1000;
+let overrideCache = { at: 0, byCountry: new Map() };
+
+/** Drop the cache so the next read sees a just-saved change. */
+function invalidateOverrides() {
+  overrideCache = { at: 0, byCountry: new Map() };
+}
+
+async function loadOverrides() {
+  if (Date.now() - overrideCache.at < OVERRIDE_TTL_MS) return overrideCache.byCountry;
+
+  // Check the connection before querying. Mongoose BUFFERS commands while
+  // disconnected and only gives up after ten seconds, and maxTimeMS does not
+  // help because it is a server-side limit on a query that was never sent.
+  // Building the guide calls this path once per market per month, so an outage
+  // would turn a page render into an hours-long stall instead of a fast degrade
+  // to provider data.
+  if (mongoose.connection.readyState !== 1) {
+    overrideCache = { at: Date.now(), byCountry: overrideCache.byCountry };
+    return overrideCache.byCountry;
+  }
+
+  const byCountry = new Map();
+  try {
+    const rows = await FlightFare.find({ active: true }).maxTimeMS(2000).lean();
+    for (const row of rows) {
+      if (!byCountry.has(row.country)) byCountry.set(row.country, []);
+      byCountry.get(row.country).push(row);
+    }
+    overrideCache = { at: Date.now(), byCountry };
+  } catch (err) {
+    // A database blip must not take the fare panel down. Keep serving whatever
+    // we last loaded, and — importantly — record the attempt so we back off
+    // rather than retrying a dead connection on every single read.
+    console.error("[flights] could not load manual fares:", err.message);
+    overrideCache = { at: Date.now(), byCountry: overrideCache.byCountry };
+    return overrideCache.byCountry;
+  }
+
+  return byCountry;
+}
+
+/**
+ * The manual entry that applies to this market and month, if any.
+ * A month-specific entry beats a market-wide one.
+ */
+async function findOverride(country, month) {
+  const rows = (await loadOverrides()).get(country);
+  if (!rows || rows.length === 0) return null;
+  return rows.find((r) => r.month === month) || rows.find((r) => !r.month) || null;
+}
+
+function overrideEstimate(base, row, month) {
+  const ageDays = Math.floor((Date.now() - new Date(row.updatedAt).getTime()) / 86400000);
+  return {
+    ...base,
+    ...EMPTY_FARE,
+    amount: roundUpTo10(row.amount),
+    sampledAt: row.updatedAt,
+    source: "manual",
+    basis: "manual",
+    basisMonth: row.month || null,
+    basisNote:
+      row.publicNote ||
+      `Our own estimate for this route${row.month ? "" : ", year-round"}. We will confirm it with your quote.`,
+    manualAgeDays: ageDays,
+    manualNeedsReview: ageDays > (row.reviewAfterDays ?? 90),
+  };
+}
+
 /* ── Read path (what the website calls) ───────────────────────────────────── */
 
 function describeOrigin(origin, month, monthNumber) {
@@ -209,6 +292,8 @@ const EMPTY_FARE = {
   basisNote: null,
   basisSampleSize: null,
   basisMonth: null,
+  manualAgeDays: null,
+  manualNeedsReview: null,
 };
 
 /**
@@ -224,6 +309,12 @@ async function getEstimate(originInput, monthInput) {
   const month = parseMonthKey(monthInput) ? String(monthInput).trim() : monthKey(new Date());
   const { month: monthNumber } = parseMonthKey(month);
   const base = describeOrigin(origin, month, monthNumber);
+
+  // 0. A manual entry marked as beating the provider.
+  const override = await findOverride(origin.country, month);
+  if (override && override.overrideLive) {
+    return overrideEstimate(base, override, month);
+  }
 
   // 1. A fare for this exact market and month.
   const cached = await redisClient.get(cacheKey(origin.country, month));
@@ -247,6 +338,12 @@ async function getEstimate(originInput, monthInput) {
     } catch {
       // A corrupt entry is not worth failing a page render over — fall through.
     }
+  }
+
+  // 1b. A manual entry filling a gap: no live fare for this month, so a figure
+  // the team entered beats anything inferred from other months or other markets.
+  if (override) {
+    return overrideEstimate(base, override, month);
   }
 
   // 2. This market's own cheapest fare from another month in the window. More
@@ -746,6 +843,7 @@ async function probeProvider({ origin = "GB", month } = {}) {
 
 module.exports = {
   getEstimate,
+  invalidateOverrides,
   getEstimatesForMonth,
   getGuideMatrix,
   getCoverage,

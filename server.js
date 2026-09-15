@@ -31,6 +31,7 @@ const healthRoutes = require("./routes/health");
 const companyRoutes = require("./routes/company");
 const showcaseRoutes = require("./routes/showcase");
 const flightRoutes = require("./routes/flights");
+const flightFareRoutes = require("./routes/flightFares");
 const { startScheduledRefresh } = require("./services/flightPricingService");
 
 app.set("trust proxy", 1);
@@ -131,10 +132,10 @@ app.use("/api/health", healthRoutes);
 app.use("/api/company", companyRoutes);
 app.use("/api/showcase", showcaseRoutes);
 app.use("/api/flights", flightRoutes);
+app.use("/api/flight-fares", flightFareRoutes);
 
-// Indicative-fare sampling. No-op unless FLIGHT_PRICING_REFRESH_ENABLED=true
-// and Amadeus credentials are set, so dev and preview deployments stay off the
-// quota and simply serve the hand-maintained guide.
+// Indicative-fare sampling. No-op unless FLIGHT_PRICING_REFRESH_ENABLED=true and
+// a provider is configured, so dev and preview deployments stay off the quota.
 startScheduledRefresh();
 
 app.get("/", (req, res) => {

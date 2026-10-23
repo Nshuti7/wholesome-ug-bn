@@ -6,8 +6,12 @@
 # store, no dev deps, no build toolchain). Much smaller than a Nixpacks image.
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Node 22 (alpine). Bumped 20→22 on 2026-10-23: Node 20 is EOL (Apr 2026) and
+# missed the Oct 2026 security release that fixed the Brotli RCE
+# (CVE-2026-111497); engines allows ">=20 <23", so 22 is the patched landing
+# spot. The floating 22-alpine tag resolves to 22.23.4.
 # ---- Base: pinned Node + pnpm (via corepack, version from package.json) ----
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
@@ -20,7 +24,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --prod --frozen-lockfile
 
 # ---- Runtime: clean Node image, no pnpm/corepack, runs unprivileged ----
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 
